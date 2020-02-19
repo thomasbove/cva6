@@ -212,6 +212,7 @@ module ariane import ariane_pkg::*; #(
   logic                     fence_i_commit_controller;
   logic                     fence_commit_controller;
   logic                     sfence_vma_commit_controller;
+  logic [19:0]              fence_t_commit_controller;
   logic                     halt_ctrl;
   logic                     halt_csr_ctrl;
   logic                     dcache_flush_ctrl_cache;
@@ -483,6 +484,7 @@ module ariane import ariane_pkg::*; #(
     .fence_i_o              ( fence_i_commit_controller     ),
     .fence_o                ( fence_commit_controller       ),
     .sfence_vma_o           ( sfence_vma_commit_controller  ),
+    .fence_t_o              ( fence_t_commit_controller     ),
     .flush_commit_o         ( flush_commit                  ),
     .*
   );
@@ -597,6 +599,7 @@ module ariane import ariane_pkg::*; #(
     .resolved_branch_i      ( resolved_branch               ),
     .fence_i_i              ( fence_i_commit_controller     ),
     .fence_i                ( fence_commit_controller       ),
+    .fence_t_i              ( fence_t_commit_controller     ),
     .sfence_vma_i           ( sfence_vma_commit_controller  ),
     .flush_commit_i         ( flush_commit                  ),
 
