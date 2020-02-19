@@ -29,6 +29,7 @@ module controller (
     output logic            flush_tlb_o,            // Flush TLBs
     output logic            flush_dcache_lfsr_o,
     output logic            flush_icache_lfsr_o,
+    output logic            flush_tlb_plru_tree_o,
 
     input  logic            halt_csr_i,             // Halt request from CSR (WFI instruction)
     output logic            halt_o,                 // Halt signal to commit stage
@@ -64,6 +65,7 @@ module controller (
         flush_bp_o             = 1'b0;
         flush_dcache_lfsr_o    = 1'b0;
         flush_icache_lfsr_o    = 1'b0;
+        flush_tlb_plru_tree_o  = 1'b0;
         // ------------
         // Mis-predict
         // ------------
@@ -150,6 +152,7 @@ module controller (
         flush_bp_o             |= fence_t_i[7];
         flush_dcache_lfsr_o    |= fence_t_i[8];
         flush_icache_lfsr_o    |= fence_t_i[9];
+        flush_tlb_plru_tree_o  |= fence_t_i[10];
 
         fence_active_d         |= fence_t_i[4];
 

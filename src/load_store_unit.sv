@@ -56,6 +56,7 @@ module load_store_unit #(
     input  logic [43:0]              satp_ppn_i,               // From CSR register file
     input  logic [ASID_WIDTH-1:0]    asid_i,                   // From CSR register file
     input  logic                     flush_tlb_i,
+    input  logic                     flush_tlb_plru_tree_i,
     // Performance counters
     output logic                     itlb_miss_o,
     output logic                     dtlb_miss_o,

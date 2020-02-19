@@ -53,6 +53,7 @@ module mmu #(
         input logic [43:0]                      satp_ppn_i,
         input logic [ASID_WIDTH-1:0]            asid_i,
         input logic                             flush_tlb_i,
+        input logic                             flush_tlb_plru_tree_i,
         // Performance counters
         output logic                            itlb_miss_o,
         output logic                            dtlb_miss_o,
@@ -95,6 +96,7 @@ module mmu #(
         .clk_i            ( clk_i                      ),
         .rst_ni           ( rst_ni                     ),
         .flush_i          ( flush_tlb_i                ),
+        .flush_tlb_plru_tree_i,
 
         .update_i         ( update_ptw_itlb            ),
 
@@ -115,6 +117,7 @@ module mmu #(
         .clk_i            ( clk_i                       ),
         .rst_ni           ( rst_ni                      ),
         .flush_i          ( flush_tlb_i                 ),
+        .flush_tlb_plru_tree_i,
 
         .update_i         ( update_ptw_dtlb             ),
 

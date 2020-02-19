@@ -203,6 +203,7 @@ module ariane #(
   logic                     flush_commit;
   logic                     flush_dcache_lfsr_ctrl_cache;
   logic                     flush_icache_lfsr_ctrl_cache;
+  logic                     flush_tlb_plru_tree_ctrl_ex;
 
   icache_areq_i_t           icache_areq_ex_cache;
   icache_areq_o_t           icache_areq_cache_ex;
@@ -403,6 +404,7 @@ module ariane #(
     .enable_translation_i   ( enable_translation_csr_ex   ), // from CSR
     .en_ld_st_translation_i ( en_ld_st_translation_csr_ex ),
     .flush_tlb_i            ( flush_tlb_ctrl_ex           ),
+    .flush_tlb_plru_tree_i  ( flush_tlb_plru_tree_ctrl_ex ),
     .priv_lvl_i             ( priv_lvl                    ), // from CSR
     .ld_st_priv_lvl_i       ( ld_st_priv_lvl_csr_ex       ), // from CSR
     .sum_i                  ( sum_csr_ex                  ), // from CSR
@@ -556,6 +558,7 @@ module ariane #(
     .flush_dcache_ack_i     ( dcache_flush_ack_cache_ctrl   ),
     .flush_dcache_lfsr_o    ( flush_dcache_lfsr_ctrl_cache  ),
     .flush_icache_lfsr_o    ( flush_icache_lfsr_ctrl_cache  ),
+    .flush_tlb_plru_tree_o  ( flush_tlb_plru_tree_ctrl_ex   ),
 
     .halt_csr_i             ( halt_csr_ctrl                 ),
     .halt_o                 ( halt_ctrl                     ),
