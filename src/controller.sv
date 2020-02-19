@@ -37,6 +37,7 @@ module controller (
     input  logic            flush_csr_i,            // We got an instruction which altered the CSR, flush the pipeline
     input  logic            fence_i_i,              // fence.i in
     input  logic            fence_i,                // fence in
+    input  logic [19:0]     fence_t_i,              // fence.t in
     input  logic            sfence_vma_i,           // We got an instruction to flush the TLBs and pipeline
     input  logic            flush_commit_i          // Flush request from commit stage
 );
@@ -108,7 +109,7 @@ module controller (
 
 // this is not needed in the case since we
 // have a write-through cache in this case
-`ifndef WT_DCACHE
+//`ifndef WT_DCACHE
         // wait for the acknowledge here
         if (flush_dcache_ack_i && fence_active_q) begin
             fence_active_d = 1'b0;
@@ -116,7 +117,7 @@ module controller (
         end else if (fence_active_q) begin
             flush_dcache = 1'b1;
         end
-`endif
+//`endif
         // ---------------------------------
         // SFENCE.VMA
         // ---------------------------------
@@ -129,6 +130,22 @@ module controller (
 
             flush_tlb_o            = 1'b1;
         end
+
+        // ---------------------------------
+        // FENCE.T
+        // ---------------------------------
+        set_pc_commit_o        |= |fence_t_i;
+
+        flush_if_o             |= fence_t_i[0];
+        flush_unissued_instr_o |= fence_t_i[1];
+        flush_id_o             |= fence_t_i[2];
+        flush_ex_o             |= fence_t_i[3];
+        flush_dcache           |= fence_t_i[4];
+        flush_icache_o         |= fence_t_i[5];
+        flush_tlb_o            |= fence_t_i[6];
+        flush_bp_o             |= fence_t_i[7];
+
+        fence_active_d         |= fence_t_i[4];
 
         // Set PC to commit stage and flush pipleine
         if (flush_csr_i || flush_commit_i) begin
