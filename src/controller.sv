@@ -27,6 +27,8 @@ module controller (
     output logic            flush_dcache_o,         // Flush DCache
     input  logic            flush_dcache_ack_i,     // Acknowledge the whole DCache Flush
     output logic            flush_tlb_o,            // Flush TLBs
+    output logic            flush_dcache_lfsr_o,
+    output logic            flush_icache_lfsr_o,
 
     input  logic            halt_csr_i,             // Halt request from CSR (WFI instruction)
     output logic            halt_o,                 // Halt signal to commit stage
@@ -60,6 +62,8 @@ module controller (
         flush_icache_o         = 1'b0;
         flush_tlb_o            = 1'b0;
         flush_bp_o             = 1'b0;
+        flush_dcache_lfsr_o    = 1'b0;
+        flush_icache_lfsr_o    = 1'b0;
         // ------------
         // Mis-predict
         // ------------
@@ -144,6 +148,8 @@ module controller (
         flush_icache_o         |= fence_t_i[5];
         flush_tlb_o            |= fence_t_i[6];
         flush_bp_o             |= fence_t_i[7];
+        flush_dcache_lfsr_o    |= fence_t_i[8];
+        flush_icache_lfsr_o    |= fence_t_i[9];
 
         fence_active_d         |= fence_t_i[4];
 

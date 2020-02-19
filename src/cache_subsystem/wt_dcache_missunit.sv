@@ -27,6 +27,7 @@ module wt_dcache_missunit #(
   input  logic                                       enable_i,    // from CSR
   input  logic                                       flush_i,     // flush request, this waits for pending tx (write, read) to finish and will clear the cache
   output logic                                       flush_ack_o, // send a single cycle acknowledge signal when the cache is flushed
+  input  logic                                       flush_lfsr_i,
   output logic                                       miss_o,      // we missed on a ld/st
   // local cache management signals
   input  logic                                       wbuffer_empty_i,
@@ -158,6 +159,7 @@ module wt_dcache_missunit #(
     .clk_i          ( clk_i       ),
     .rst_ni         ( rst_ni      ),
     .en_i           ( update_lfsr ),
+    .flush_i        ( flush_lfsr_i),
     .refill_way_oh  (             ),
     .refill_way_bin ( rnd_way     )
   );

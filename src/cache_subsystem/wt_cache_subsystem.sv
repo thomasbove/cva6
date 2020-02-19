@@ -42,6 +42,8 @@ module wt_cache_subsystem #(
   input  logic                           dcache_flush_i,         // high until acknowledged
   output logic                           dcache_flush_ack_o,     // send a single cycle acknowledge signal when the cache is flushed
   output logic                           dcache_miss_o,          // we missed on a ld/st
+  input  logic                           flush_dcache_lfsr_i,
+  input  logic                           flush_icache_lfsr_i,
   // AMO interface
   input amo_req_t                        dcache_amo_req_i,
   output amo_resp_t                      dcache_amo_resp_o,
@@ -79,6 +81,7 @@ module wt_cache_subsystem #(
     .clk_i              ( clk_i                   ),
     .rst_ni             ( rst_ni                  ),
     .flush_i            ( icache_flush_i          ),
+    .flush_lfsr_i       ( flush_icache_lfsr_i     ),
     .en_i               ( icache_en_i             ),
     .miss_o             ( icache_miss_o           ),
     .areq_i             ( icache_areq_i           ),
@@ -107,6 +110,7 @@ module wt_cache_subsystem #(
     .rst_ni          ( rst_ni                  ),
     .enable_i        ( dcache_enable_i         ),
     .flush_i         ( dcache_flush_i          ),
+    .flush_lfsr_i    ( flush_dcache_lfsr_i     ),
     .flush_ack_o     ( dcache_flush_ack_o      ),
     .miss_o          ( dcache_miss_o           ),
     .wbuffer_empty_o ( wbuffer_empty_o         ),

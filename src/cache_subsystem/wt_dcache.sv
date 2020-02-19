@@ -29,6 +29,7 @@ module wt_dcache #(
   input  logic                           enable_i,    // from CSR
   input  logic                           flush_i,     // high until acknowledged
   output logic                           flush_ack_o, // send a single cycle acknowledge signal when the cache is flushed
+  input  logic                           flush_lfsr_i,
   output logic                           miss_o,      // we missed on a ld/st
   output logic                           wbuffer_empty_o,
 
@@ -118,6 +119,7 @@ module wt_dcache #(
     .enable_i           ( enable_i           ),
     .flush_i            ( flush_i            ),
     .flush_ack_o        ( flush_ack_o        ),
+    .flush_lfsr_i,
     .miss_o             ( miss_o             ),
     .wbuffer_empty_i    ( wbuffer_empty_o    ),
     .cache_en_o         ( cache_en           ),
