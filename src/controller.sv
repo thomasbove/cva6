@@ -30,6 +30,9 @@ module controller (
     output logic            flush_dcache_lfsr_o,
     output logic            flush_icache_lfsr_o,
     output logic            flush_tlb_plru_tree_o,
+    output logic            flush_dcache_mem_arb_o,
+    output logic            flush_dcache_wbuffer_arb_o,
+    output logic            flush_dcache_fifo_o,
 
     input  logic            halt_csr_i,             // Halt request from CSR (WFI instruction)
     output logic            halt_o,                 // Halt signal to commit stage
@@ -66,6 +69,9 @@ module controller (
         flush_dcache_lfsr_o    = 1'b0;
         flush_icache_lfsr_o    = 1'b0;
         flush_tlb_plru_tree_o  = 1'b0;
+        flush_dcache_mem_arb_o     = 1'b0;
+        flush_dcache_wbuffer_arb_o = 1'b0;
+        flush_dcache_fifo_o        = 1'b0;
         // ------------
         // Mis-predict
         // ------------
@@ -140,21 +146,24 @@ module controller (
         // ---------------------------------
         // FENCE.T
         // ---------------------------------
-        set_pc_commit_o        |= |fence_t_i;
+        set_pc_commit_o            |= |fence_t_i;
 
-        flush_if_o             |= fence_t_i[0];
-        flush_unissued_instr_o |= fence_t_i[1];
-        flush_id_o             |= fence_t_i[2];
-        flush_ex_o             |= fence_t_i[3];
-        flush_dcache           |= fence_t_i[4];
-        flush_icache_o         |= fence_t_i[5];
-        flush_tlb_o            |= fence_t_i[6];
-        flush_bp_o             |= fence_t_i[7];
-        flush_dcache_lfsr_o    |= fence_t_i[8];
-        flush_icache_lfsr_o    |= fence_t_i[9];
-        flush_tlb_plru_tree_o  |= fence_t_i[10];
+        flush_if_o                 |= fence_t_i[0];
+        flush_unissued_instr_o     |= fence_t_i[1];
+        flush_id_o                 |= fence_t_i[2];
+        flush_ex_o                 |= fence_t_i[3];
+        flush_dcache               |= fence_t_i[4];
+        flush_icache_o             |= fence_t_i[5];
+        flush_tlb_o                |= fence_t_i[6];
+        flush_bp_o                 |= fence_t_i[7];
+        flush_dcache_lfsr_o        |= fence_t_i[8];
+        flush_icache_lfsr_o        |= fence_t_i[9];
+        flush_tlb_plru_tree_o      |= fence_t_i[10];
+        flush_dcache_mem_arb_o     |= fence_t_i[11];
+        flush_dcache_wbuffer_arb_o |= fence_t_i[12];
+        flush_dcache_fifo_o        |= fence_t_i[13];
 
-        fence_active_d         |= fence_t_i[4];
+        fence_active_d             |= fence_t_i[4];
 
         // Set PC to commit stage and flush pipleine
         if (flush_csr_i || flush_commit_i) begin

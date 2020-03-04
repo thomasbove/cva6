@@ -204,6 +204,9 @@ module ariane #(
   logic                     flush_dcache_lfsr_ctrl_cache;
   logic                     flush_icache_lfsr_ctrl_cache;
   logic                     flush_tlb_plru_tree_ctrl_ex;
+  logic                     flush_dcache_mem_arb_ctrl_cache;
+  logic                     flush_dcache_wbuffer_arb_ctrl_cache;
+  logic                     flush_dcache_fifo_ctrl_cache;
 
   icache_areq_i_t           icache_areq_ex_cache;
   icache_areq_o_t           icache_areq_cache_ex;
@@ -559,6 +562,9 @@ module ariane #(
     .flush_dcache_lfsr_o    ( flush_dcache_lfsr_ctrl_cache  ),
     .flush_icache_lfsr_o    ( flush_icache_lfsr_ctrl_cache  ),
     .flush_tlb_plru_tree_o  ( flush_tlb_plru_tree_ctrl_ex   ),
+    .flush_dcache_mem_arb_o      ( flush_dcache_mem_arb_ctrl_cache     ),
+    .flush_dcache_wbuffer_arb_o  ( flush_dcache_wbuffer_arb_ctrl_cache ),
+    .flush_dcache_fifo_o         ( flush_dcache_fifo_ctrl_cache        ),
 
     .halt_csr_i             ( halt_csr_ctrl                 ),
     .halt_o                 ( halt_ctrl                     ),
@@ -604,6 +610,9 @@ module ariane #(
     .dcache_flush_ack_o    ( dcache_flush_ack_cache_ctrl ),
     .flush_dcache_lfsr_i   ( flush_dcache_lfsr_ctrl_cache),
     .flush_icache_lfsr_i   ( flush_icache_lfsr_ctrl_cache),
+    .flush_dcache_mem_arb_i     ( flush_dcache_mem_arb_ctrl_cache     ),
+    .flush_dcache_wbuffer_arb_i ( flush_dcache_wbuffer_arb_ctrl_cache ),
+    .flush_dcache_fifo_i        ( flush_dcache_fifo_ctrl_cache        ),
     // to commit stage
     .dcache_amo_req_i      ( amo_req                     ),
     .dcache_amo_resp_o     ( amo_resp                    ),

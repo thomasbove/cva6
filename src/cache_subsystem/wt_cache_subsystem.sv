@@ -44,6 +44,9 @@ module wt_cache_subsystem #(
   output logic                           dcache_miss_o,          // we missed on a ld/st
   input  logic                           flush_dcache_lfsr_i,
   input  logic                           flush_icache_lfsr_i,
+  input  logic                           flush_dcache_mem_arb_i,
+  input  logic                           flush_dcache_wbuffer_arb_i,
+  input  logic                           flush_dcache_fifo_i,
   // AMO interface
   input amo_req_t                        dcache_amo_req_i,
   output amo_resp_t                      dcache_amo_resp_o,
@@ -112,6 +115,9 @@ module wt_cache_subsystem #(
     .flush_i         ( dcache_flush_i          ),
     .flush_lfsr_i    ( flush_dcache_lfsr_i     ),
     .flush_ack_o     ( dcache_flush_ack_o      ),
+    .flush_mem_arb_i ( flush_dcache_mem_arb_i  ),
+    .flush_wbuffer_arb_i( flush_dcache_wbuffer_arb_i ),
+    .flush_fifo_i    ( flush_dcache_fifo_i     ),
     .miss_o          ( dcache_miss_o           ),
     .wbuffer_empty_o ( wbuffer_empty_o         ),
     .amo_req_i       ( dcache_amo_req_i        ),

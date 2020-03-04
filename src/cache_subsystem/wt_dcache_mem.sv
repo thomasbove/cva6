@@ -34,6 +34,8 @@ module wt_dcache_mem #(
 ) (
   input  logic                                              clk_i,
   input  logic                                              rst_ni,
+  input  logic                                              flush_i,
+  input  logic                                              flush_arb_i,
 
   // ports
   input  logic  [NumPorts-1:0][DCACHE_TAG_WIDTH-1:0]        rd_tag_i,           // tag in - comes one cycle later
@@ -142,7 +144,7 @@ module wt_dcache_mem #(
   ) i_rr_arb_tree (
     .clk_i  (clk_i   ),
     .rst_ni (rst_ni  ),
-    .flush_i('0      ),
+    .flush_i(flush_arb_i   ),
     .rr_i   ('0      ),
     .req_i  (rd_req_masked ),
     .gnt_o  (rd_ack_o      ),
