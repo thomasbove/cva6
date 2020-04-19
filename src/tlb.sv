@@ -100,10 +100,7 @@ module tlb #(
         for (int unsigned i = 0; i < TLB_ENTRIES; i++) begin
             if (flush_i) begin
                 // invalidate logic
-                if (lu_asid_i == 1'b0) // flush everything if ASID is 0
-                    tags_n[i].valid = 1'b0;
-                else if (lu_asid_i == tags_q[i].asid) // just flush entries from this ASID
-                    tags_n[i].valid = 1'b0;
+                tags_n[i].valid = 1'b0;
 
             // normal replacement
             end else if (update_i.valid & replace_en[i]) begin
