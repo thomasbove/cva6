@@ -186,11 +186,6 @@ module controller (
             flush_unissued_instr_o = 1'b1;
             flush_id_o             = 1'b1;
             flush_ex_o             = 1'b1;
-            // this potentially reduces performance, but is needed
-            // to suppress speculative fetches to virtual memory from
-            // machine mode. TODO: remove when PMA checkers have been
-            // added to the system
-            flush_bp_o             = 1'b1;
         end
     end
 
