@@ -169,12 +169,14 @@ package ariane_pkg;
 `endif
     localparam bit RVA = cva6_config_pkg::CVA6ConfigAExtEn; // Is A extension enabled
 
-    // Is there an accelerator?
-`ifdef ENABLE_ACCELERATOR
-    localparam bit ENABLE_ACCELERATOR = `ENABLE_ACCELERATOR;
+`ifdef RVV_ARIANE
+    localparam bit RVV = `RVV_ARIANE;
 `else
-    localparam bit ENABLE_ACCELERATOR = 1'b0;
+    localparam bit RVV = 1'b0;
 `endif
+
+    // Is there an accelerator enabled?
+    localparam bit ENABLE_ACCELERATOR = RVV;
 
     // Transprecision floating-point extensions configuration
     localparam bit XF16    = cva6_config_pkg::CVA6ConfigF16En; // Is half-precision float extension (Xf16) enabled
@@ -224,6 +226,7 @@ package ariane_pkg;
                                      | (0   << 13)  // N - User level interrupts supported
                                      | (1   << 18)  // S - Supervisor mode implemented
                                      | (1   << 20)  // U - User mode implemented
+                                     | (RVV << 21)  // V - Vector extension
                                      | (NSX << 23)  // X - Non-standard extensions present
                                      | ((riscv::XLEN == 64 ? 2 : 1) << riscv::XLEN-2);  // MXL
 
