@@ -236,7 +236,7 @@ package ariane_pkg;
     localparam bit CVXIF_PRESENT = cva6_config_pkg::CVA6ConfigCvxifEn;
 
     // when cvx interface is present, use an additional writeback port
-    localparam NR_WB_PORTS = CVXIF_PRESENT ? 5 : 4;
+    localparam NR_WB_PORTS = CVXIF_PRESENT ? 6 : 5;
 
     // Read ports for general purpose register files
     localparam NR_RGPR_PORTS = 2;
