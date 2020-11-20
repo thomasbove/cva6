@@ -66,7 +66,7 @@ sources:
     - core/mmu_sv32/cva6_ptw_sv32.sv
     - core/load_unit.sv
     - core/issue_read_operands.sv
-    - src/cva6_accel_dispatcher.sv
+    - src/accel_dispatcher.sv
     - core/pmp/src/pmp_entry.sv
     - core/pmp/src/pmp.sv
     - vendor/pulp-platform/fpnew/src/fpnew_fma.sv
