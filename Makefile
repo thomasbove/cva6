@@ -39,9 +39,9 @@ ifeq ($(support_verilator_4), 0)
 	verilator_threads := 2
 endif
 
-ifndef RISCV
-$(error RISCV not set - please point your RISCV variable to your RISCV installation)
-endif
+#ifndef RISCV
+#$(error RISCV not set - please point your RISCV variable to your RISCV installation)
+#endif
 
 # By default assume spike resides at the RISCV prefix.
 SPIKE_ROOT     ?= $(RISCV)
