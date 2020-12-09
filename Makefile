@@ -566,15 +566,17 @@ fpga_filter += $(addprefix $(root-dir), src/util/instr_trace_item.sv)
 fpga_filter += $(addprefix $(root-dir), src/util/instr_tracer_if.sv)
 fpga_filter += $(addprefix $(root-dir), src/util/instr_tracer.sv)
 
-fpga: $(ariane_pkg) $(util) $(src) $(fpga_src) $(uart_src)
-	@echo "[FPGA] Generate sources"
-	@echo read_vhdl        {$(uart_src)}    > fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(ariane_pkg)} >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(util))}     >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> fpga/scripts/add_sources.tcl
-	@echo read_verilog -sv {$(fpga_src)}   >> fpga/scripts/add_sources.tcl
+fpga: fpga/scripts/add_sources.tcl
 	@echo "[FPGA] Generate Bitstream"
 	cd fpga && make BOARD=$(BOARD) XILINX_PART=$(XILINX_PART) XILINX_BOARD=$(XILINX_BOARD) CLK_PERIOD_NS=$(CLK_PERIOD_NS)
+
+fpga/scripts/add_sources.tcl: $(ariane_pkg) $(util) $(src) $(fpga_src) $(uart_src)
+	@echo "[FPGA] Generate sources"
+	@echo read_vhdl        {$(uart_src)}    > $@
+	@echo read_verilog -sv {$(ariane_pkg)} >> $@
+	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(util))}     >> $@
+	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> $@
+	@echo read_verilog -sv {$(fpga_src)}   >> $@
 
 .PHONY: fpga
 
