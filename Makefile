@@ -572,8 +572,7 @@ fpga: fpga/scripts/add_sources.tcl
 
 fpga/scripts/add_sources.tcl: $(ariane_pkg) $(util) $(src) $(fpga_src) $(uart_src)
 	@echo "[FPGA] Generate sources"
-	@echo read_vhdl        {$(uart_src)}    > $@
-	@echo read_verilog -sv {$(ariane_pkg)} >> $@
+	@echo read_verilog -sv {$(ariane_pkg)} > $@
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(util))}     >> $@
 	@echo read_verilog -sv {$(filter-out $(fpga_filter), $(src))} 	   >> $@
 	@echo read_verilog -sv {$(fpga_src)}   >> $@
