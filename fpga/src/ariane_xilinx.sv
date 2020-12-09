@@ -137,6 +137,11 @@ module ariane_xilinx (
   input  wire [7:0]    pci_exp_rxp     ,
   input  wire [7:0]    pci_exp_rxn     ,
   input  logic         trst_n          ,
+`elsif HERO
+  input  logic        clk_i     ,
+  input  logic        rst_ni    ,
+  input  logic        trst_ni   ,
+  AXI_BUS.Master      to_dram   ,
 `endif
   // SPI
   output logic        spi_mosi    ,
@@ -207,6 +212,9 @@ assign cpu_resetn = ~cpu_reset;
 `elsif VC707
 assign cpu_resetn = ~cpu_reset;
 assign trst_n = ~trst;
+`elsif HERO
+// cpu_resetn not used
+assign trst_n = trst_ni;
 `endif
 
 logic pll_locked;
@@ -240,8 +248,13 @@ rstgen i_rstgen_main (
     .init_no      (                          ) // keep open
 );
 
+`ifndef HERO
 assign rst_n = ~ddr_sync_reset;
 assign rst = ddr_sync_reset;
+`else
+assign rst_n = rst_ni;
+assign rst = ~rst_ni;
+`endif
 
 // ---------------
 // AXI Xbar
@@ -506,13 +519,36 @@ bootrom i_bootrom (
   logic [3:0] unused_switches = 4'b0000;
 `endif
 
+`ifdef HERO
+  logic       eth_rst_n;
+  logic       eth_rxck;
+  logic       eth_rxctl;
+  logic [3:0] eth_rxd;
+  logic       eth_txck;
+  logic       eth_txctl;
+  logic [3:0] eth_txd;
+  wire        eth_mdio;
+  logic       eth_mdc;
+  assign eth_rxck = '0;
+  assign eth_rxctl = '0;
+  assign eth_rxd = '0;
+
+  logic [7:0] led,
+              sw;
+  assign sw = '0;
+`endif
+
 ariane_peripherals #(
     .AxiAddrWidth ( AxiAddrWidth     ),
     .AxiDataWidth ( AxiDataWidth     ),
     .AxiIdWidth   ( AxiIdWidthSlaves ),
     .AxiUserWidth ( AxiUserWidth     ),
     .InclUART     ( 1'b1             ),
+    `ifndef HERO
     .InclGPIO     ( 1'b1             ),
+    `else
+    .InclGPIO     ( 1'b0             ),
+    `endif
     `ifdef KINTEX7
     .InclSPI      ( 1'b1         ),
     .InclEthernet ( 1'b1         )
@@ -523,6 +559,9 @@ ariane_peripherals #(
     .InclSPI      ( 1'b1         ),
     .InclEthernet ( 1'b0         )
     `elsif VCU118
+    .InclSPI      ( 1'b0         ),
+    .InclEthernet ( 1'b0         )
+    `elsif HERO
     .InclSPI      ( 1'b0         ),
     .InclEthernet ( 1'b0         )
     `endif
@@ -571,6 +610,7 @@ ariane_peripherals #(
 // ---------------
 // DDR
 // ---------------
+`ifndef HERO
 logic [AxiIdWidthSlaves-1:0] s_axi_awid;
 logic [AxiAddrWidth-1:0]     s_axi_awaddr;
 logic [7:0]                  s_axi_awlen;
@@ -610,6 +650,7 @@ logic [1:0]                  s_axi_rresp;
 logic                        s_axi_rlast;
 logic                        s_axi_rvalid;
 logic                        s_axi_rready;
+`endif
 
 AXI_BUS #(
     .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
@@ -690,6 +731,51 @@ xlnx_protocol_checker i_xlnx_protocol_checker (
 assign dram.r_user = '0;
 assign dram.b_user = '0;
 
+`ifdef HERO
+  assign to_dram.aw_id = dram.aw_id;
+  assign to_dram.aw_addr = dram.aw_addr;
+  assign to_dram.aw_len = dram.aw_len;
+  assign to_dram.aw_size = dram.aw_size;
+  assign to_dram.aw_burst = dram.aw_burst;
+  assign to_dram.aw_lock = dram.aw_lock;
+  assign to_dram.aw_cache = dram.aw_cache;
+  assign to_dram.aw_prot = dram.aw_prot;
+  assign to_dram.aw_region = dram.aw_region;
+  assign to_dram.aw_qos = dram.aw_qos;
+  assign to_dram.aw_valid = dram.aw_valid;
+  assign dram.aw_ready = to_dram.aw_ready;
+  assign to_dram.w_data = dram.w_data;
+  assign to_dram.w_strb = dram.w_strb;
+  assign to_dram.w_last = dram.w_last;
+  assign to_dram.w_valid = dram.w_valid;
+  assign dram.w_ready = to_dram.w_ready;
+  assign dram.b_id = to_dram.b_id;
+  assign dram.b_resp = to_dram.b_resp;
+  assign dram.b_valid = to_dram.b_valid;
+  assign to_dram.b_ready = dram.b_ready;
+  assign to_dram.ar_id = dram.ar_id;
+  assign to_dram.ar_addr = dram.ar_addr;
+  assign to_dram.ar_len = dram.ar_len;
+  assign to_dram.ar_size = dram.ar_size;
+  assign to_dram.ar_burst = dram.ar_burst;
+  assign to_dram.ar_lock = dram.ar_lock;
+  assign to_dram.ar_cache = dram.ar_cache;
+  assign to_dram.ar_prot = dram.ar_prot;
+  assign to_dram.ar_region = dram.ar_region;
+  assign to_dram.ar_qos = dram.ar_qos;
+  assign to_dram.ar_valid = dram.ar_valid;
+  assign dram.ar_ready = to_dram.ar_ready;
+  assign dram.r_id = to_dram.r_id;
+  assign dram.r_data = to_dram.r_data;
+  assign dram.r_last = to_dram.r_last;
+  assign dram.r_resp = to_dram.r_resp;
+  assign dram.r_valid = to_dram.r_valid;
+  assign to_dram.r_ready = dram.r_ready;
+  assign to_dram.ar_user = '0;
+  assign to_dram.aw_atop = '0;
+  assign to_dram.aw_user = '0;
+  assign to_dram.w_user = '0;
+`else
 xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_aclk     ( clk              ),
   .s_axi_aresetn  ( ndmreset_n       ),
@@ -775,7 +861,9 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .m_axi_rvalid   ( s_axi_rvalid     ),
   .m_axi_rready   ( s_axi_rready     )
 );
+`endif
 
+`ifndef HERO
 xlnx_clk_gen i_xlnx_clk_gen (
   .clk_out1 ( clk           ), // 50 MHz
   .clk_out2 ( phy_tx_clk    ), // 125 MHz (for RGMII PHY)
@@ -785,6 +873,10 @@ xlnx_clk_gen i_xlnx_clk_gen (
   .locked   ( pll_locked    ),
   .clk_in1  ( ddr_clock_out )
 );
+`else
+  assign clk = clk_i;
+  assign pll_locked = 1'b1;
+`endif
 
 `ifdef KINTEX7
 fan_ctrl i_fan_ctrl (
