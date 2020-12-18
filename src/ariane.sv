@@ -717,6 +717,7 @@ module ariane import ariane_pkg::*; #(
 `endif
 
   //pragma translate_off
+`ifndef TARGET_SYNTHESIS
 `ifdef PITON_ARIANE
   localparam PC_QUEUE_DEPTH = 16;
 
@@ -892,6 +893,7 @@ module ariane import ariane_pkg::*; #(
     $fclose(f);
   end
 `endif // VERILATOR
+`endif // TARGET_SYNTHESIS
 //pragma translate_on
 
 endmodule // ariane
