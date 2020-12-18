@@ -262,9 +262,9 @@ module tlb import ariane_pkg::*; #(
       return count;
     endfunction
 
-    assert property (@(posedge clk_i)(countSetBits(lu_hit) <= 1))
+    assert property (@(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (countSetBits(lu_hit) <= 1))
       else begin $error("More then one hit in TLB!"); $stop(); end
-    assert property (@(posedge clk_i)(countSetBits(replace_en) <= 1))
+    assert property (@(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (countSetBits(replace_en) <= 1))
       else begin $error("More then one TLB entry selected for next replace!"); $stop(); end
 
     `endif

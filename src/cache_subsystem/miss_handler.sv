@@ -511,7 +511,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     `ifndef VERILATOR
     // assert that cache only hits on one way
     assert property (
-      @(posedge clk_i) $onehot0(evict_way_q)) else $warning("Evict-way should be one-hot encoded");
+      @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) $onehot0(evict_way_q)) else $warning("Evict-way should be one-hot encoded");
     `endif
     //pragma translate_on
     // ----------------------
@@ -781,13 +781,13 @@ module arbiter #(
     //pragma translate_off
     `ifndef VERILATOR
     // make sure that we eventually get an rvalid after we received a grant
-    assert property (@(posedge clk_i) data_gnt_i |-> ##[1:$] data_rvalid_i )
+    assert property (@(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) data_gnt_i |-> ##[1:$] data_rvalid_i )
         else begin $error("There was a grant without a rvalid"); $stop(); end
     // assert that there is no grant without a request
-    assert property (@(negedge clk_i) data_gnt_i |-> data_req_o)
+    assert property (@(negedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) data_gnt_i |-> data_req_o)
         else begin $error("There was a grant without a request."); $stop(); end
     // assert that the address does not contain X when request is sent
-    assert property ( @(posedge clk_i) (data_req_o) |-> (!$isunknown(address_o)) )
+    assert property ( @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (data_req_o) |-> (!$isunknown(address_o)) )
       else begin $error("address contains X when request is set"); $stop(); end
 
     `endif

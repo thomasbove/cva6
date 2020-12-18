@@ -258,7 +258,7 @@ module wt_dcache_ctrl import ariane_pkg::*; import wt_cache_pkg::*; #(
 `ifndef VERILATOR
 
   hot1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) (!rd_ack_i) |=> cache_en_i |-> $onehot0(rd_hit_oh_i))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (!rd_ack_i) |=> cache_en_i |-> $onehot0(rd_hit_oh_i))
       else $fatal(1,"[l1 dcache ctrl] rd_hit_oh_i signal must be hot1");
 
   initial begin

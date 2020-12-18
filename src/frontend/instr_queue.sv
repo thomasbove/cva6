@@ -350,11 +350,11 @@ module instr_queue (
   // pragma translate_off
   `ifndef VERILATOR
       replay_address_fifo: assert property (
-        @(posedge clk_i) disable iff (!rst_ni) replay_o |-> !i_fifo_address.push_i
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) replay_o |-> !i_fifo_address.push_i
       ) else $fatal(1,"[instr_queue] Pushing address although replay asserted");
 
       output_select_onehot: assert property (
-        @(posedge clk_i) $onehot0(idx_ds_q)
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) $onehot0(idx_ds_q)
       ) else begin $error("Output select should be one-hot encoded"); $stop(); end
   `endif
   // pragma translate_on

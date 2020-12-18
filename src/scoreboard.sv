@@ -373,20 +373,20 @@ module scoreboard #(
 
   // assert that zero is never set
   assert property (
-    @(posedge clk_i) disable iff (!rst_ni) (rd_clobber_gpr_o[0] == ariane_pkg::NONE))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (rd_clobber_gpr_o[0] == ariane_pkg::NONE))
     else $fatal (1,"RD 0 should not bet set");
   // assert that we never acknowledge a commit if the instruction is not valid
   assert property (
-    @(posedge clk_i) disable iff (!rst_ni) commit_ack_i[0] |-> commit_instr_o[0].valid)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) commit_ack_i[0] |-> commit_instr_o[0].valid)
     else $fatal (1,"Commit acknowledged but instruction is not valid");
 
   assert property (
-    @(posedge clk_i) disable iff (!rst_ni) commit_ack_i[1] |-> commit_instr_o[1].valid)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) commit_ack_i[1] |-> commit_instr_o[1].valid)
     else $fatal (1,"Commit acknowledged but instruction is not valid");
 
   // assert that we never give an issue ack signal if the instruction is not valid
   assert property (
-    @(posedge clk_i) disable iff (!rst_ni) issue_ack_i |-> issue_instr_valid_o)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) issue_ack_i |-> issue_instr_valid_o)
     else $fatal (1,"Issue acknowledged but instruction is not valid");
 
   // there should never be more than one instruction writing the same destination register (except x0)
@@ -394,7 +394,7 @@ module scoreboard #(
   for (genvar i = 0; i < NR_WB_PORTS; i++) begin
     for (genvar j = 0; j < NR_WB_PORTS; j++)  begin
       assert property (
-        @(posedge clk_i) disable iff (!rst_ni) wt_valid_i[i] && wt_valid_i[j] && (i != j) |-> (trans_id_i[i] != trans_id_i[j]))
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) wt_valid_i[i] && wt_valid_i[j] && (i != j) |-> (trans_id_i[i] != trans_id_i[j]))
         else $fatal (1,"Two or more functional units are retiring instructions with the same transaction id!");
     end
   end

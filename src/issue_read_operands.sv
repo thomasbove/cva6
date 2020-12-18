@@ -444,7 +444,7 @@ module issue_read_operands import ariane_pkg::*; #(
     //pragma translate_off
     `ifndef VERILATOR
      assert property (
-        @(posedge clk_i) (branch_valid_q) |-> (!$isunknown(operand_a_q) && !$isunknown(operand_b_q)))
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (branch_valid_q) |-> (!$isunknown(operand_a_q) && !$isunknown(operand_b_q)))
         else $warning ("Got unknown value in one of the operands");
 
     `endif

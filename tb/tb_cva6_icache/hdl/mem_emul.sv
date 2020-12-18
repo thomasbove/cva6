@@ -244,11 +244,11 @@ module mem_emul import ariane_pkg::*; import wt_cache_pkg::*; #(
   assign exp_vaddr_o = stim_addr;
 
   align0: assert property (
-    @(posedge clk_i) disable iff (~rst_ni) ~exp_empty |-> stim_addr[1:0] == 0)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) ~exp_empty |-> stim_addr[1:0] == 0)
        else $fatal(1,"stim_addr is not 32bit word aligned");
 
   align1: assert property (
-    @(posedge clk_i) disable iff (~rst_ni) ~outfifo_empty |-> outfifo_data.paddr[1:0] == 0)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) ~outfifo_empty |-> outfifo_data.paddr[1:0] == 0)
        else $fatal(1,"paddr is not 32bit word aligned");
 
 

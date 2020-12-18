@@ -258,19 +258,19 @@ module store_buffer import ariane_pkg::*; (
     // assert that commit is never set when we are flushing this would be counter intuitive
     // as flush and commit is decided in the same stage
     commit_and_flush: assert property (
-        @(posedge clk_i) rst_ni && flush_i |-> !commit_i)
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) flush_i |-> !commit_i)
         else $error ("[Commit Queue] You are trying to commit and flush in the same cycle");
 
     speculative_buffer_overflow: assert property (
-        @(posedge clk_i) rst_ni && (speculative_status_cnt_q == DEPTH_SPEC) |-> !valid_i)
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (speculative_status_cnt_q == DEPTH_SPEC) |-> !valid_i)
         else $error ("[Speculative Queue] You are trying to push new data although the buffer is not ready");
 
     speculative_buffer_underflow: assert property (
-        @(posedge clk_i) rst_ni && (speculative_status_cnt_q == 0) |-> !commit_i)
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (speculative_status_cnt_q == 0) |-> !commit_i)
         else $error ("[Speculative Queue] You are committing although there are no stores to commit");
 
     commit_buffer_overflow: assert property (
-        @(posedge clk_i) rst_ni && (commit_status_cnt_q == DEPTH_COMMIT) |-> !commit_i)
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (commit_status_cnt_q == DEPTH_COMMIT) |-> !commit_i)
         else $error("[Commit Queue] You are trying to commit a store although the buffer is full");
     `endif
     //pragma translate_on

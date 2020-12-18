@@ -482,19 +482,19 @@ end else begin : gen_piton_offset
 //pragma translate_off
 `ifndef VERILATOR
   repl_inval0: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) cache_wren |-> !(mem_rtrn_i.inv.all | mem_rtrn_i.inv.vld))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) cache_wren |-> !(mem_rtrn_i.inv.all | mem_rtrn_i.inv.vld))
       else $fatal(1,"[l1 icache] cannot replace cacheline and invalidate cacheline simultaneously");
 
   repl_inval1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) (mem_rtrn_i.inv.all | mem_rtrn_i.inv.vld) |-> !cache_wren)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (mem_rtrn_i.inv.all | mem_rtrn_i.inv.vld) |-> !cache_wren)
       else $fatal(1,"[l1 icache] cannot replace cacheline and invalidate cacheline simultaneously");
 
   invalid_state: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) (state_q inside {FLUSH, IDLE, READ, MISS, KILL_ATRANS, KILL_MISS}))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (state_q inside {FLUSH, IDLE, READ, MISS, KILL_ATRANS, KILL_MISS}))
       else $fatal(1,"[l1 icache] fsm reached an invalid state");
 
   hot1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) (!inv_en) |-> cache_rden |=> cmp_en_q |-> $onehot0(cl_hit))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (!inv_en) |-> cache_rden |=> cmp_en_q |-> $onehot0(cl_hit))
       else $fatal(1,"[l1 icache] cl_hit signal must be hot1");
 
   // this is only used for verification!
@@ -521,7 +521,7 @@ end else begin : gen_piton_offset
   end
 
   tag_write_duplicate: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) |vld_req |-> vld_we |-> !(|tag_write_duplicate_test))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) |vld_req |-> vld_we |-> !(|tag_write_duplicate_test))
       else $fatal(1,"[l1 icache] cannot allocate a CL that is already present in the cache");
 
 

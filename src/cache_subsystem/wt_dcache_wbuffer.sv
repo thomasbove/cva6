@@ -522,37 +522,37 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
 `ifndef VERILATOR
 
   hot1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) req_port_i.data_req |-> $onehot0(wbuffer_hit_oh))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) req_port_i.data_req |-> $onehot0(wbuffer_hit_oh))
       else $fatal(1,"[l1 dcache wbuffer] wbuffer_hit_oh signal must be hot1");
 
   tx_status: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) evict && miss_ack_i && miss_req_o |-> (tx_id != rtrn_id))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) evict && miss_ack_i && miss_req_o |-> (tx_id != rtrn_id))
       else $fatal(1,"[l1 dcache wbuffer] cannot allocate and clear same tx slot id in the same cycle");
 
   tx_valid0: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) evict |-> tx_stat_q[rtrn_id].vld)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) evict |-> tx_stat_q[rtrn_id].vld)
       else $fatal(1,"[l1 dcache wbuffer] evicting invalid transaction slot");
 
   tx_valid1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) evict |-> |wbuffer_q[rtrn_ptr].valid)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) evict |-> |wbuffer_q[rtrn_ptr].valid)
       else $fatal(1,"[l1 dcache wbuffer] wbuffer entry corresponding to this transaction is invalid");
 
   write_full: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) req_port_i.data_req |-> req_port_o.data_gnt |-> ((!full) || (|wbuffer_hit_oh)))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) req_port_i.data_req |-> req_port_o.data_gnt |-> ((!full) || (|wbuffer_hit_oh)))
       else $fatal(1,"[l1 dcache wbuffer] cannot write if full or no hit");
 
   unused0: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) !req_port_i.tag_valid)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) !req_port_i.tag_valid)
       else $fatal(1,"[l1 dcache wbuffer] req_port_i.tag_valid should not be asserted");
 
   unused1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) !req_port_i.kill_req)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) !req_port_i.kill_req)
       else $fatal(1,"[l1 dcache wbuffer] req_port_i.kill_req should not be asserted");
 
   for (genvar k=0; k<DCACHE_WBUF_DEPTH; k++) begin : gen_assert1
     for (genvar j=0; j<8; j++) begin : gen_assert2
       byteStates: assert property (
-        @(posedge clk_i) disable iff (!rst_ni) {wbuffer_q[k].valid[j], wbuffer_q[k].dirty[j], wbuffer_q[k].txblock[j]} inside {3'b000, 3'b110, 3'b101, 3'b111} )
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) {wbuffer_q[k].valid[j], wbuffer_q[k].dirty[j], wbuffer_q[k].txblock[j]} inside {3'b000, 3'b110, 3'b101, 3'b111} )
           else $fatal(1,"[l1 dcache wbuffer] byte %02d of wbuffer entry %02d has invalid state: valid=%01b, dirty=%01b, txblock=%01b",
             j,k,
             wbuffer_q[k].valid[j],

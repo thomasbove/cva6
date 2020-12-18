@@ -335,23 +335,23 @@ module tb_mem import tb_pkg::*; import ariane_pkg::*; import wt_cache_pkg::*;#(
 `ifndef verilator
 
     nc_region: assert property (
-        @(posedge clk_i) disable iff (~rst_ni) mem_data_req_i |-> mem_data_i.paddr >= CachedAddrEnd || mem_data_i.paddr < CachedAddrBeg |-> mem_data_i.nc)
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) mem_data_req_i |-> mem_data_i.paddr >= CachedAddrEnd || mem_data_i.paddr < CachedAddrBeg |-> mem_data_i.nc)
         else $fatal(1, "cached access into noncached region");
 
     cached_reads: assert property (
-        @(posedge clk_i) disable iff (~rst_ni) mem_data_req_i |-> mem_data_i.rtype==DCACHE_LOAD_REQ |-> ~mem_data_i.nc |-> mem_data_i.size == 3'b111)
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) mem_data_req_i |-> mem_data_i.rtype==DCACHE_LOAD_REQ |-> ~mem_data_i.nc |-> mem_data_i.size == 3'b111)
         else $fatal(1, "cached read accesses always have to be one CL wide");
 
     nc_reads: assert property (
-        @(posedge clk_i) disable iff (~rst_ni) mem_data_req_i |-> mem_data_i.rtype==DCACHE_LOAD_REQ |-> mem_data_i.nc |-> mem_data_i.size inside {3'b000, 3'b001, 3'b010, 3'b011})
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) mem_data_req_i |-> mem_data_i.rtype==DCACHE_LOAD_REQ |-> mem_data_i.nc |-> mem_data_i.size inside {3'b000, 3'b001, 3'b010, 3'b011})
         else $fatal(1, "nc read size can only be one of the following: byte, halfword, word, dword");
 
     write_size: assert property (
-        @(posedge clk_i) disable iff (~rst_ni) mem_data_req_i |-> mem_data_i.rtype==DCACHE_STORE_REQ |-> mem_data_i.size inside {3'b000, 3'b001, 3'b010, 3'b011})
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) mem_data_req_i |-> mem_data_i.rtype==DCACHE_STORE_REQ |-> mem_data_i.size inside {3'b000, 3'b001, 3'b010, 3'b011})
         else $fatal(1, "write size can only be one of the following: byte, halfword, word, dword");
 
     addr_range: assert property (
-        @(posedge clk_i) disable iff (~rst_ni) mem_data_req_i |-> mem_data_i.rtype inside {DCACHE_STORE_REQ, DCACHE_STORE_REQ} |-> mem_data_i.paddr < (MemWords<<3))
+        @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) mem_data_req_i |-> mem_data_i.rtype inside {DCACHE_STORE_REQ, DCACHE_STORE_REQ} |-> mem_data_i.paddr < (MemWords<<3))
         else $fatal(1, "address is out of bounds");
 
 `endif

@@ -311,15 +311,15 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
 `ifndef VERILATOR
 
   hit_hot1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) &vld_req |-> !vld_we |=> $onehot0(rd_hit_oh_o))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) &vld_req |-> !vld_we |=> $onehot0(rd_hit_oh_o))
       else $fatal(1,"[l1 dcache] rd_hit_oh_o signal must be hot1");
 
   word_write_hot1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) wr_ack_o |-> $onehot0(wr_req_i))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) wr_ack_o |-> $onehot0(wr_req_i))
       else $fatal(1,"[l1 dcache] wr_req_i signal must be hot1");
 
   wbuffer_hit_hot1: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) &vld_req |-> !vld_we |=> $onehot0(wbuffer_hit_oh))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) &vld_req |-> !vld_we |=> $onehot0(wbuffer_hit_oh))
       else $fatal(1,"[l1 dcache] wbuffer_hit_oh signal must be hot1");
 
   // this is only used for verification!
@@ -346,7 +346,7 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
   end
 
   tag_write_duplicate: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) |vld_req |-> vld_we |-> !(|tag_write_duplicate_test))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) |vld_req |-> vld_we |-> !(|tag_write_duplicate_test))
       else $fatal(1,"[l1 dcache] cannot allocate a CL that is already present in the cache");
 
 `endif

@@ -348,26 +348,26 @@ l15_rtrn_t rtrn_fifo_data;
 `ifndef VERILATOR
 
   invalidations: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype == L15_EVICT_REQ |-> (l15_rtrn_i.l15_inval_icache_inval    |
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype == L15_EVICT_REQ |-> (l15_rtrn_i.l15_inval_icache_inval    |
                                                                                                                   l15_rtrn_i.l15_inval_dcache_inval    |
                                                                                                                   l15_rtrn_i.l15_inval_icache_all_way  |
                                                                                                                   l15_rtrn_i.l15_inval_dcache_all_way))
       else $fatal(1,"[l15_adapter] got invalidation package with zero invalidation flags");
 
   blockstore_o: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) l15_req_o.l15_val |-> l15_req_o.l15_rqtype == L15_STORE_RQ |-> !(l15_req_o.l15_blockstore || l15_req_o.l15_blockinitstore))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) l15_req_o.l15_val |-> l15_req_o.l15_rqtype == L15_STORE_RQ |-> !(l15_req_o.l15_blockstore || l15_req_o.l15_blockinitstore))
       else $fatal(1,"[l15_adapter] blockstores are not supported (out)");
 
   blockstore_i: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype inside {L15_ST_ACK, L15_ST_ACK} |-> !l15_rtrn_i.l15_blockinitstore)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype inside {L15_ST_ACK, L15_ST_ACK} |-> !l15_rtrn_i.l15_blockinitstore)
       else $fatal(1,"[l15_adapter] blockstores are not supported (in)");
 
   unsuported_rtrn_types: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) (l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype inside {L15_LOAD_RET, L15_ST_ACK, L15_IFILL_RET, L15_EVICT_REQ, L15_CPX_RESTYPE_ATOMIC_RES}))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype inside {L15_LOAD_RET, L15_ST_ACK, L15_IFILL_RET, L15_EVICT_REQ, L15_CPX_RESTYPE_ATOMIC_RES}))
       else $warning("[l15_adapter] return type %X04 is not (yet) supported by l15 adapter.", l15_rtrn_i.l15_returntype);
 
   amo_type: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) (l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype inside {L15_CPX_RESTYPE_ATOMIC_RES} |-> l15_rtrn_i.l15_atomic ))
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) (l15_rtrn_i.l15_val |-> l15_rtrn_i.l15_returntype inside {L15_CPX_RESTYPE_ATOMIC_RES} |-> l15_rtrn_i.l15_atomic ))
       else $fatal(1,"[l15_adapter] l15_atomic must be asserted when the return type is an ATOMIC_RES");
 
   initial begin

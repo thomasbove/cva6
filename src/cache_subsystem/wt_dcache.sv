@@ -312,7 +312,7 @@ module wt_dcache import ariane_pkg::*; import wt_cache_pkg::*; #(
 //pragma translate_off
 `ifndef VERILATOR
   flush: assert property (
-    @(posedge clk_i) disable iff (!rst_ni) flush_i |-> flush_ack_o |-> wbuffer_empty_o)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) flush_i |-> flush_ack_o |-> wbuffer_empty_o)
      else $fatal(1,"[l1 dcache] flushed cache implies flushed wbuffer");
 
    initial begin

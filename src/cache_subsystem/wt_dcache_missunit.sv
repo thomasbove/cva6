@@ -537,15 +537,15 @@ end
 `ifndef VERILATOR
 
   read_tid : assert property (
-    @(posedge clk_i) disable iff (!rst_ni) mshr_vld_q |-> mem_rtrn_vld_i |-> load_ack |-> mem_rtrn_i.tid == mshr_q.id)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) mshr_vld_q |-> mem_rtrn_vld_i |-> load_ack |-> mem_rtrn_i.tid == mshr_q.id)
       else $fatal(1,"[l1 dcache missunit] TID of load response doesn't match");
 
   read_ports : assert property (
-    @(posedge clk_i) disable iff (!rst_ni) |miss_req_i[NumPorts-2:0] |-> miss_we_i[NumPorts-2:0] == 0)
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) |miss_req_i[NumPorts-2:0] |-> miss_we_i[NumPorts-2:0] == 0)
       else $fatal(1,"[l1 dcache missunit] only last port can issue write requests");
 
   write_port : assert property (
-    @(posedge clk_i) disable iff (!rst_ni) miss_req_i[NumPorts-1] |-> miss_we_i[NumPorts-1])
+    @(posedge clk_i) disable iff (rst_ni === 1'b0 || rst_ni === 1'bx) miss_req_i[NumPorts-1] |-> miss_we_i[NumPorts-1])
       else $fatal(1,"[l1 dcache missunit] last port can only issue write requests");
 
  initial begin

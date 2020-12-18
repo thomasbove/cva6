@@ -122,7 +122,7 @@ module dromajo_ram
 
   // pragma translate_off
   assert property
-    (@(posedge Clk_CI) (longint'(2)**longint'(ADDR_WIDTH) >= longint'(DATA_DEPTH)))
+    (@(posedge Clk_CI) disable iff (Rst_RBI === 1'b0 || Rst_RBI === 1'bx) (longint'(2)**longint'(ADDR_WIDTH) >= longint'(DATA_DEPTH)))
     else $error("depth out of bounds");
   // pragma translate_on
 
