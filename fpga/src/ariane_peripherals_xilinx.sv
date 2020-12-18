@@ -491,7 +491,6 @@ module ariane_peripherals #(
         assign spi.b_valid = spi.aw_valid;
         assign spi.b_id = spi.aw_id;
         assign spi.b_resp = axi_pkg::RESP_SLVERR;
-        assign spi.b_user = '0;
 
         assign spi.r_valid = spi.ar_valid;
         assign spi.r_resp = axi_pkg::RESP_SLVERR;
