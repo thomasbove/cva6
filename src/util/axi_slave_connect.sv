@@ -28,21 +28,21 @@ module axi_slave_connect (
     assign  axi_req_o.aw.qos     = slave.aw_qos;
     assign  axi_req_o.aw.atop    = slave.aw_atop;
     assign  axi_req_o.aw.region  = slave.aw_region;
-    // assign                     = slave.aw_user;
+    assign  axi_req_o.aw.user    = slave.aw_user;
     assign  axi_req_o.aw_valid   = slave.aw_valid;
     assign  slave.aw_ready       = axi_resp_i.aw_ready;
 
     assign  axi_req_o.w.data     = slave.w_data;
     assign  axi_req_o.w.strb     = slave.w_strb;
     assign  axi_req_o.w.last     = slave.w_last;
-    // assign                     = slave.w_user;
+    assign  axi_req_o.w.user     = slave.w_user;
     assign  axi_req_o.w_valid    = slave.w_valid;
     assign  slave.w_ready        = axi_resp_i.w_ready;
 
     assign  slave.b_id           = axi_resp_i.b.id;
     assign  slave.b_resp         = axi_resp_i.b.resp;
+    assign  slave.b_user         = axi_resp_i.b.user;
     assign  slave.b_valid        = axi_resp_i.b_valid;
-    assign  slave.b_user         = 1'b0;
     assign  axi_req_o.b_ready    = slave.b_ready;
 
     assign  axi_req_o.ar.id      = slave.ar_id;
@@ -55,7 +55,7 @@ module axi_slave_connect (
     assign  axi_req_o.ar.prot    = slave.ar_prot;
     assign  axi_req_o.ar.qos     = slave.ar_qos;
     assign  axi_req_o.ar.region  = slave.ar_region;
-    // assign                     = slave.ar_user;
+    assign  axi_req_o.ar.user    = slave.ar_user;
     assign  axi_req_o.ar_valid   = slave.ar_valid;
     assign  slave.ar_ready       = axi_resp_i.ar_ready;
 
@@ -63,8 +63,8 @@ module axi_slave_connect (
     assign  slave.r_data         = axi_resp_i.r.data;
     assign  slave.r_resp         = axi_resp_i.r.resp;
     assign  slave.r_last         = axi_resp_i.r.last;
+    assign  slave.r_user         = axi_resp_i.r.user;
     assign  slave.r_valid        = axi_resp_i.r_valid;
-    assign  slave.r_user         = 1'b0;
     assign  axi_req_o.r_ready    = slave.r_ready;
 
 endmodule
