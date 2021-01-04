@@ -28,19 +28,20 @@ module axi_master_connect (
     assign master.aw_qos        = axi_req_i.aw.qos;
     assign master.aw_atop       = axi_req_i.aw.atop;
     assign master.aw_region     = axi_req_i.aw.region;
-    assign master.aw_user       = '0;
+    assign master.aw_user       = axi_req_i.aw.user;
     assign master.aw_valid      = axi_req_i.aw_valid;
     assign axi_resp_o.aw_ready  = master.aw_ready;
 
     assign master.w_data        = axi_req_i.w.data;
     assign master.w_strb        = axi_req_i.w.strb;
     assign master.w_last        = axi_req_i.w.last;
-    assign master.w_user        = '0;
+    assign master.w_user        = axi_req_i.w.user;
     assign master.w_valid       = axi_req_i.w_valid;
     assign axi_resp_o.w_ready   = master.w_ready;
 
     assign axi_resp_o.b.id      = master.b_id;
     assign axi_resp_o.b.resp    = master.b_resp;
+    assign axi_resp_o.b.user    = master.b_user;
     assign axi_resp_o.b_valid   = master.b_valid;
     assign master.b_ready       = axi_req_i.b_ready;
 
@@ -54,13 +55,14 @@ module axi_master_connect (
     assign master.ar_prot       = axi_req_i.ar.prot;
     assign master.ar_qos        = axi_req_i.ar.qos;
     assign master.ar_region     = axi_req_i.ar.region;
-    assign master.ar_user       = '0;
+    assign master.ar_user       = axi_req_i.ar.user;
     assign master.ar_valid      = axi_req_i.ar_valid;
     assign axi_resp_o.ar_ready  = master.ar_ready;
 
     assign axi_resp_o.r.id      = master.r_id;
     assign axi_resp_o.r.data    = master.r_data;
     assign axi_resp_o.r.resp    = master.r_resp;
+    assign axi_resp_o.r.user    = master.r_user;
     assign axi_resp_o.r.last    = master.r_last;
     assign axi_resp_o.r_valid   = master.r_valid;
     assign master.r_ready       = axi_req_i.r_ready;
