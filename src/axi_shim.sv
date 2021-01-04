@@ -89,10 +89,12 @@ module axi_shim #(
     assign axi_req_o.aw.cache  = 4'b0;
     assign axi_req_o.aw.qos    = 4'b0;
     assign axi_req_o.aw.atop   = wr_atop_i; 
+    assign axi_req_o.aw.user   = '0;
     // data
     assign axi_req_o.w.data    = wr_data_i[wr_cnt_q];
     assign axi_req_o.w.strb    = wr_be_i[wr_cnt_q];
     assign axi_req_o.w.last    = wr_cnt_done;
+    assign axi_req_o.w.user    = '0;
 
     // write response
     assign wr_exokay_o         = (axi_resp_i.b.resp == axi_pkg::RESP_EXOKAY);
@@ -245,6 +247,7 @@ module axi_shim #(
     assign axi_req_o.ar.lock   = rd_lock_i;
     assign axi_req_o.ar.cache  = 4'b0;
     assign axi_req_o.ar.qos    = 4'b0;
+    assign axi_req_o.ar.user   = '0;
 
     // make the read request
     assign axi_req_o.ar_valid  = rd_req_i;
