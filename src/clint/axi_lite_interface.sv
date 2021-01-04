@@ -38,6 +38,9 @@ module axi_lite_interface #(
     // address register
     logic [AXI_ADDR_WIDTH-1:0] address_n,  address_q;
 
+    assign axi_resp_o.b.user = '0;
+    assign axi_resp_o.r.user = '0;
+
     // pass through read data on the read data channel
     assign axi_resp_o.r.data = data_i;
     // send back the transaction id we've latched
