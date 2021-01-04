@@ -587,6 +587,13 @@ module ariane_peripherals #(
         assign ethernet.r_resp = axi_pkg::RESP_SLVERR;
         assign ethernet.r_data = 'hdeadbeef;
         assign ethernet.r_last = 1'b1;
+
+        assign eth_txck = 1'b0;
+        assign eth_txd = 1'b0;
+        assign eth_txctl = 1'b0;
+        assign eth_rst_n = 1'b0;
+        assign eth_mdc = 1'b0;
+        assign eth_mdio = 1'b0;
     end
 
     // 5. GPIO
@@ -731,6 +738,8 @@ module ariane_peripherals #(
 
         assign s_axi_gpio_rlast = 1'b1;
 
+    end else begin : gen_no_gpio
+        assign leds_o = '0;
     end
 
     // 6. Timer
