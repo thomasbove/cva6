@@ -190,12 +190,25 @@ logic ipi;
 
 logic clk;
 logic eth_clk;
+`ifndef HERO
 logic spi_clk_i;
+`endif
 logic phy_tx_clk;
 logic sd_clk_sys;
 
+`ifdef HERO
+assign eth_clk = 1'b0;
+assign phy_tx_clk = 1'b0;
+assign sd_clk_sys = 1'b0;
+`endif
+
+`ifndef HERO
 logic ddr_sync_reset;
+`endif
 logic ddr_clock_out;
+`ifdef HERO
+assign ddr_clock_out = 1'b0;
+`endif
 
 logic rst_n, rst;
 logic rtc;
