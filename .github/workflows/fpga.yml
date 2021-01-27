@@ -1,0 +1,29 @@
+# Copyright 2020 ETH Zurich and University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+# Run functional regression checks
+name: ci
+on: [push]
+
+jobs:
+  ########################
+  # Synthesis FPGA Image #
+  ########################
+  genesys2:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/openhwgroup/vivado:latest
+      credentials:
+        username: zarubaf
+        password: ${{ secrets.GHCR_PAT }}
+      options: -h vivado --mac-address 02:42:ac:11:00:02
+    name: Genesys2 FPGA Build
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Build
+      run: |
+        apt-get update && apt-get install make
+        make fpga RISCV=/home/riscv
