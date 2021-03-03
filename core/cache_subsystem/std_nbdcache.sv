@@ -183,34 +183,32 @@ import std_cache_pkg::*;
     // Memory Arrays
     // --------------
     for (genvar i = 0; i < DCACHE_SET_ASSOC; i++) begin : sram_block
-        sram #(
-            .DATA_WIDTH ( DCACHE_LINE_WIDTH                 ),
-            .NUM_WORDS  ( DCACHE_NUM_WORDS                  )
+        tc_sram #(
+            .DataWidth ( DCACHE_LINE_WIDTH                  ),
+            .NumWords  ( DCACHE_NUM_WORDS                   ),
+            .NumPorts  ( 1                                  )
         ) data_sram (
             .req_i   ( req_ram [i]                          ),
             .rst_ni  ( rst_ni                               ),
             .we_i    ( we_ram                               ),
             .addr_i  ( addr_ram[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET]  ),
-            .wuser_i ( '0                                   ),
             .wdata_i ( wdata_ram.data                       ),
             .be_i    ( be_ram.data                          ),
-            .ruser_o (                                      ),
             .rdata_o ( rdata_ram[i].data                    ),
             .*
         );
 
-        sram #(
-            .DATA_WIDTH ( DCACHE_TAG_WIDTH                  ),
-            .NUM_WORDS  ( DCACHE_NUM_WORDS                  )
+        tc_sram #(
+            .DataWidth ( DCACHE_TAG_WIDTH                   ),
+            .NumWords  ( DCACHE_NUM_WORDS                   ),
+            .NumPorts  ( 1                                  )
         ) tag_sram (
             .req_i   ( req_ram [i]                          ),
             .rst_ni  ( rst_ni                               ),
             .we_i    ( we_ram                               ),
             .addr_i  ( addr_ram[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET]  ),
-            .wuser_i ( '0                                   ),
             .wdata_i ( wdata_ram.tag                        ),
             .be_i    ( be_ram.tag                           ),
-            .ruser_o (                                      ),
             .rdata_o ( rdata_ram[i].tag                     ),
             .*
         );
@@ -233,20 +231,18 @@ import std_cache_pkg::*;
         assign rdata_ram[i].valid = dirty_rdata[8*i+1];
     end
 
-    sram #(
-        .USER_WIDTH ( 1                                ),
-        .DATA_WIDTH ( 4*DCACHE_DIRTY_WIDTH             ),
-        .NUM_WORDS  ( DCACHE_NUM_WORDS                 )
+    tc_sram #(
+        .DataWidth ( 4*DCACHE_DIRTY_WIDTH             ),
+        .NumWords  ( DCACHE_NUM_WORDS                 ),
+        .NumPorts  ( 1                                )
     ) valid_dirty_sram (
         .clk_i   ( clk_i                               ),
         .rst_ni  ( rst_ni                              ),
         .req_i   ( |req_ram                            ),
         .we_i    ( we_ram                              ),
         .addr_i  ( addr_ram[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET] ),
-        .wuser_i ( '0                                  ),
         .wdata_i ( dirty_wdata                         ),
         .be_i    ( be_ram.vldrty                       ),
-        .ruser_o (                                     ),
         .rdata_o ( dirty_rdata                         )
     );
 
