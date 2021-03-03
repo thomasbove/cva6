@@ -169,14 +169,6 @@ module commit_stage import ariane_pkg::*; #(
                   we_gpr_o[0] = 1'b0;
                 end
             end
-            // -----------
-            // ACCEL Issue
-            // -----------
-            // Instruction can be issued to the (in-order) back-end if
-            // it reached the top of the scoreboard and it hasn't been
-            // issued yet
-            if (!commit_instr_i[0].valid && commit_instr_i[0].fu == ACCEL)
-                commit_acc_o = 1'b1;
             // ------------------
             // SFENCE.VMA Logic
             // ------------------
@@ -223,6 +215,15 @@ module commit_stage import ariane_pkg::*; #(
                 we_gpr_o[0] = amo_resp_i.ack;
             end
         end
+
+        // -----------
+        // ACCEL Issue
+        // -----------
+        // Instruction can be issued to the (in-order) back-end if
+        // it reached the top of the scoreboard and it hasn't been
+        // issued yet
+        if (!commit_instr_i[0].valid && commit_instr_i[0].fu == ACCEL)
+            commit_acc_o = 1'b1;
 
         if (NR_COMMIT_PORTS > 1) begin
         
