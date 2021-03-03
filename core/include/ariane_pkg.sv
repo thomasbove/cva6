@@ -564,7 +564,7 @@ package ariane_pkg;
                                // Bitmanip Logical with negate op (Bitmanip)
                                ANDN, ORN, XNOR,
                                // Accelerator operations
-                               ACCEL_OP, ACCEL_OP_FS1, ACCEL_OP_FD
+                               ACCEL_OP, ACCEL_OP_FS1, ACCEL_OP_FD, ACCEL_OP_LOAD, ACCEL_OP_STORE
                              } fu_op;
 
     typedef struct packed {
