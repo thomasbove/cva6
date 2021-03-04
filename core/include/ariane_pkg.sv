@@ -182,7 +182,7 @@ package ariane_pkg;
     localparam bit ENABLE_ACCELERATOR = RVV;
 
     // Transprecision floating-point extensions configuration
-    localparam bit XF16    = cva6_config_pkg::CVA6ConfigF16En; // Is half-precision float extension (Xf16) enabled
+    localparam bit XF16    = cva6_config_pkg::CVA6ConfigF16En | RVV; // Is half-precision float extension (Xf16) enabled
     localparam bit XF16ALT = cva6_config_pkg::CVA6ConfigF16AltEn; // Is alternative half-precision float extension (Xf16alt) enabled
     localparam bit XF8     = cva6_config_pkg::CVA6ConfigF8En; // Is quarter-precision float extension (Xf8) enabled
     localparam bit XFVEC   = cva6_config_pkg::CVA6ConfigFVecEn; // Is vectorial float extension (Xfvec) enabled
@@ -305,6 +305,7 @@ package ariane_pkg;
       riscv::instruction_t      insn;
       riscv::xlen_t             rs1;
       riscv::xlen_t             rs2;
+      fpnew_pkg::roundmode_e    frm;
       logic [TRANS_ID_BITS-1:0] trans_id;
       logic                     store_pending;
     } accelerator_req_t;
@@ -313,9 +314,14 @@ package ariane_pkg;
       riscv::xlen_t             result;
       logic [TRANS_ID_BITS-1:0] trans_id;
       logic                     error;
+
+      // Metadata
       logic                     store_pending;
       logic                     store_complete;
       logic                     load_complete;
+
+      logic               [4:0] fflags;
+      logic                     fflags_valid;
     } accelerator_resp_t;
 
     // ---------------
@@ -717,6 +723,8 @@ package ariane_pkg;
         logic [(riscv::XLEN/8)-1:0] lsu_wmask;
         riscv::xlen_t               lsu_wdata;
 `endif
+
+        logic                     vfp;           // is this a vector floating-point instruction?
     } scoreboard_entry_t;
 
     // ---------------
