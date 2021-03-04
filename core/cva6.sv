@@ -156,6 +156,8 @@ module cva6 import ariane_pkg::*; #(
   // Accelerator
   logic                     acc_ready_ex_id;
   logic                     acc_valid_id_ex;
+  logic                     acc_ld_disp_ex_id;
+  logic                     acc_st_disp_ex_id;
   logic [TRANS_ID_BITS-1:0] acc_trans_id_ex_id;
   riscv::xlen_t             acc_result_ex_id;
   logic                     acc_valid_ex_id;
@@ -407,6 +409,10 @@ module cva6 import ariane_pkg::*; #(
     // Accelerator
     .acc_ready_i                ( acc_ready_ex_id              ),
     .acc_valid_o                ( acc_valid_id_ex              ),
+    .acc_ld_disp_i              ( acc_ld_disp_ex_id            ),
+    .acc_st_disp_i              ( acc_st_disp_ex_id            ),
+    .acc_ld_complete_i          ( acc_resp_i.load_complete     ),
+    .acc_st_complete_i          ( acc_resp_i.store_complete    ),
     // Commit
     .resolved_branch_i          ( resolved_branch              ),
     .trans_id_i                 ( trans_id_ex_id               ),
@@ -516,6 +522,8 @@ module cva6 import ariane_pkg::*; #(
     .acc_resp_ready_o       ( acc_resp_ready_o            ),
     .acc_ready_o            ( acc_ready_ex_id             ),
     .acc_valid_i            ( acc_valid_id_ex             ),
+    .acc_ld_disp_o          ( acc_ld_disp_ex_id            ),
+    .acc_st_disp_o          ( acc_st_disp_ex_id            ),
     .acc_commit_i           ( acc_commit_commit_ex        ),
     .acc_trans_id_o         ( acc_trans_id_ex_id          ),
     .acc_result_o           ( acc_result_ex_id            ),
