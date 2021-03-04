@@ -55,6 +55,7 @@ module cva6 import ariane_pkg::*; #(
   input  logic                         acc_resp_valid_i,
   output logic                         acc_resp_ready_o,
   // Invalidation requests
+  output logic                         acc_cons_en_o,
   input  logic [63:0]                  inval_addr_i,
   input  logic                         inval_valid_i,
   output logic                         inval_ready_o,
@@ -290,6 +291,8 @@ module cva6 import ariane_pkg::*; #(
   logic [(riscv::XLEN/8)-1:0]           lsu_rmask;
   logic [(riscv::XLEN/8)-1:0]           lsu_wmask;
   logic [ariane_pkg::TRANS_ID_BITS-1:0] lsu_addr_trans_id;
+
+  assign acc_cons_en_o = acc_cons_en_csr;
 
   // --------------
   // Frontend
