@@ -73,6 +73,8 @@ module issue_read_operands import ariane_pkg::*; #(
     input  logic                                   acc_st_disp_i,    // Store dispatched to accelerator
     input  logic                                   acc_ld_complete_i,// Load in accelerator complete
     input  logic                                   acc_st_complete_i,// Store in accelerator complete
+    input  logic                                   acc_flush_undisp_i,//Undispatched accelerator instructions are flushed
+    input  logic                                   acc_cons_en_i,
     // commit port
     input  logic [NR_COMMIT_PORTS-1:0][4:0]        waddr_i,
     input  logic [NR_COMMIT_PORTS-1:0][riscv::XLEN-1:0] wdata_i,
@@ -219,11 +221,11 @@ module issue_read_operands import ariane_pkg::*; #(
             end
         end
 
-        if (issue_instr_i.fu == LOAD) begin
+        if (issue_instr_i.fu == LOAD && acc_cons_en_i) begin
             stall |= !acc_no_st_pending;
         end
 
-        if (issue_instr_i.fu == STORE) begin
+        if (issue_instr_i.fu == STORE && acc_cons_en_i) begin
             stall |= !(acc_no_ld_pending && acc_no_st_pending);
         end
     end
@@ -286,6 +288,7 @@ module issue_read_operands import ariane_pkg::*; #(
         fpu_rm_q       <= 3'b0;
         csr_valid_q    <= 1'b0;
         branch_valid_q <= 1'b0;
+        acc_valid_q    <= 1'b0;
       end else begin
         alu_valid_q    <= 1'b0;
         lsu_valid_q    <= 1'b0;
@@ -542,8 +545,8 @@ module issue_read_operands import ariane_pkg::*; #(
     ) i_acc_spec_loads (
         .clk_i           (clk_i                   ),
         .rst_ni          (rst_ni                  ),
-        .clear_i         (flush_i                 ),
-        .en_i            ((acc_valid_d && issue_instr_i.op == ACCEL_OP_LOAD) || acc_ld_disp_i),
+        .clear_i         (acc_flush_undisp_i      ),
+        .en_i            ((acc_valid_d && issue_instr_i.op == ACCEL_OP_LOAD) ^ acc_ld_disp_i),
         .load_i          (1'b0                    ),
         .down_i          (acc_ld_disp_i           ),
         .d_i             ('0                      ),
@@ -558,8 +561,8 @@ module issue_read_operands import ariane_pkg::*; #(
     ) i_acc_disp_loads (
         .clk_i           (clk_i                   ),
         .rst_ni          (rst_ni                  ),
-        .clear_i         (                        ),
-        .en_i            (acc_ld_disp_i || acc_ld_complete_i),
+        .clear_i         (1'b0                    ),
+        .en_i            (acc_ld_disp_i ^ acc_ld_complete_i),
         .load_i          (1'b0                    ),
         .down_i          (acc_ld_complete_i       ),
         .d_i             ('0                      ),
@@ -568,7 +571,7 @@ module issue_read_operands import ariane_pkg::*; #(
     );
 
     acc_dispatcher_no_load_overflow: assert property (
-        @(posedge clk_i) disable iff (~rst_ni) (acc_spec_loads_overflow & acc_disp_loads_overflow) == 1'b0 )
+        @(posedge clk_i) disable iff (~rst_ni) (acc_spec_loads_overflow == 1'b0) && (acc_disp_loads_overflow == 1'b0) )
     else $error("[acc_dispatcher] Too many pending loads.");
 
     // Stores
@@ -586,8 +589,8 @@ module issue_read_operands import ariane_pkg::*; #(
     ) i_acc_spec_stores (
         .clk_i           (clk_i                   ),
         .rst_ni          (rst_ni                  ),
-        .clear_i         (flush_i                 ),
-        .en_i            ((acc_valid_d && issue_instr_i.op == ACCEL_OP_STORE) || acc_st_disp_i),
+        .clear_i         (acc_flush_undisp_i      ),
+        .en_i            ((acc_valid_d && issue_instr_i.op == ACCEL_OP_STORE) ^ acc_st_disp_i),
         .load_i          (1'b0                    ),
         .down_i          (acc_st_disp_i           ),
         .d_i             ('0                      ),
@@ -602,8 +605,8 @@ module issue_read_operands import ariane_pkg::*; #(
     ) i_acc_disp_stores (
         .clk_i           (clk_i                   ),
         .rst_ni          (rst_ni                  ),
-        .clear_i         (                        ),
-        .en_i            (acc_st_disp_i || acc_st_complete_i),
+        .clear_i         (1'b0                    ),
+        .en_i            (acc_st_disp_i ^ acc_st_complete_i),
         .load_i          (1'b0                    ),
         .down_i          (acc_st_complete_i       ),
         .d_i             ('0                      ),
@@ -612,7 +615,7 @@ module issue_read_operands import ariane_pkg::*; #(
     );
 
     acc_dispatcher_no_store_overflow: assert property (
-        @(posedge clk_i) disable iff (~rst_ni) (acc_spec_stores_overflow & acc_disp_stores_overflow) == 1'b0 )
+        @(posedge clk_i) disable iff (~rst_ni) (acc_spec_stores_overflow == 1'b0) && (acc_disp_stores_overflow == 1'b0) )
     else $error("[acc_dispatcher] Too many pending stores.");
 
     //pragma translate_off
