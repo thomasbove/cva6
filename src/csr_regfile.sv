@@ -78,6 +78,9 @@ module csr_regfile import ariane_pkg::*; #(
     // Caches
     output logic                  icache_en_o,                // L1 ICache Enable
     output logic                  dcache_en_o,                // L1 DCache Enable
+    input  logic                  wt_dcache_i,                // 0: WB DCache 1: WT DCache
+    // fence.t
+    output logic [31:0]           fence_t_pad_o,              // Padding time of fence.t relative to time interrupt
     // Performance Counter
     output logic  [4:0]           perf_addr_o,                // read/write address to performance counter module (up to 29 aux counters possible in riscv encoding.h)
     output logic[riscv::XLEN-1:0] perf_data_o,                // write data to performance counter module
@@ -133,6 +136,7 @@ module csr_regfile import ariane_pkg::*; #(
     riscv::xlen_t stval_q,     stval_d;
     riscv::xlen_t dcache_q,    dcache_d;
     riscv::xlen_t icache_q,    icache_d;
+    riscv::xlen_t fence_t_pad_q, fence_t_pad_d;
 
     logic        wfi_d,       wfi_q;
 
@@ -279,6 +283,7 @@ module csr_regfile import ariane_pkg::*; #(
                 // custom (non RISC-V) cache control
                 riscv::CSR_DCACHE:           csr_rdata = dcache_q;
                 riscv::CSR_ICACHE:           csr_rdata = icache_q;
+                riscv::CSR_FENCE_T_PAD:      csr_rdata = fence_t_pad_q;
                 // PMPs
                 riscv::CSR_PMPCFG0:          csr_rdata = pmpcfg_q[7:0];
                 riscv::CSR_PMPCFG2:          csr_rdata = pmpcfg_q[15:8];
@@ -377,6 +382,7 @@ module csr_regfile import ariane_pkg::*; #(
         mtval_d                 = mtval_q;
         dcache_d                = dcache_q;
         icache_d                = icache_q;
+        fence_t_pad_d           = fence_t_pad_q;
 
         sepc_d                  = sepc_q;
         scause_d                = scause_q;
@@ -592,6 +598,7 @@ module csr_regfile import ariane_pkg::*; #(
 
                 riscv::CSR_DCACHE:             dcache_d    = {{riscv::XLEN-1{1'b0}}, csr_wdata[0]}; // enable bit
                 riscv::CSR_ICACHE:             icache_d    = {{riscv::XLEN-1{1'b0}}, csr_wdata[0]}; // enable bit
+                riscv::CSR_FENCE_T_PAD:        fence_t_pad_d = {{riscv::XLEN-32{1'b0}}, csr_wdata[31:0]};
                 // PMP locked logic
                 // 1. refuse to update any locked entry
                 // 2. also refuse to update the entry below a locked TOR entry
@@ -1052,6 +1059,7 @@ module csr_regfile import ariane_pkg::*; #(
     assign icache_en_o      = icache_q[0] & (~debug_mode_q);
 `endif
     assign dcache_en_o      = dcache_q[0];
+    assign fence_t_pad_o    = fence_t_pad_q;
 
     // determine if mprv needs to be considered if in debug mode
     assign mprv             = (debug_mode_q && !dcsr_q.mprven) ? 1'b0 : mstatus_q.mprv;
@@ -1089,8 +1097,9 @@ module csr_regfile import ariane_pkg::*; #(
             mcounteren_q           <= {riscv::XLEN{1'b0}};
             mscratch_q             <= {riscv::XLEN{1'b0}};
             mtval_q                <= {riscv::XLEN{1'b0}};
-            dcache_q               <= {{riscv::XLEN-1{1'b0}}, 1'b1};
+            dcache_q               <= {{riscv::XLEN-2{1'b0}}, wt_dcache_i, 1'b1};
             icache_q               <= {{riscv::XLEN-1{1'b0}}, 1'b1};
+            fence_t_pad_q          <= {riscv::XLEN{1'b0}};
             // supervisor mode registers
             sepc_q                 <= {riscv::XLEN{1'b0}};
             scause_q               <= {riscv::XLEN{1'b0}};
@@ -1134,6 +1143,7 @@ module csr_regfile import ariane_pkg::*; #(
             mtval_q                <= mtval_d;
             dcache_q               <= dcache_d;
             icache_q               <= icache_d;
+            fence_t_pad_q          <= fence_t_pad_d;
             // supervisor mode registers
             sepc_q                 <= sepc_d;
             scause_q               <= scause_d;
