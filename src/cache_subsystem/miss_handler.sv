@@ -533,8 +533,8 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     logic                        valid_bypass_fsm;
     logic [63:0]                 data_bypass_fsm;
     logic [$clog2(NR_PORTS)-1:0] id_fsm_bypass;
-    logic [3:0]                  id_bypass_fsm;
-    logic [3:0]                  gnt_id_bypass_fsm;
+    logic [AXI_ID_WIDTH-1:0]     id_bypass_fsm;
+    logic [AXI_ID_WIDTH-1:0]     gnt_id_bypass_fsm;
 
     arbiter #(
         .NR_PORTS       ( NR_PORTS                                 ),
@@ -585,7 +585,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .wdata_i               ( req_fsm_bypass_wdata   ),
         .be_i                  ( req_fsm_bypass_be      ),
         .size_i                ( req_fsm_bypass_size    ),
-        .id_i                  ( {2'b10, id_fsm_bypass} ),
+        .id_i                  ( {{AXI_ID_WIDTH-4{1'b0}}, 2'b10, id_fsm_bypass} ),
         .valid_o               ( valid_bypass_fsm       ),
         .rdata_o               ( data_bypass_fsm        ),
         .gnt_id_o              ( gnt_id_bypass_fsm      ),
@@ -618,7 +618,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .wdata_i             ( req_fsm_miss_wdata ),
         .be_i                ( req_fsm_miss_be    ),
         .size_i              ( req_fsm_miss_size  ),
-        .id_i                ( 4'b1100            ),
+        .id_i                ( {{AXI_ID_WIDTH-4{1'b0}}, 4'b1100} ),
         .gnt_id_o            (                    ), // open
         .valid_o             ( valid_miss_fsm     ),
         .rdata_o             ( data_miss_fsm      ),
