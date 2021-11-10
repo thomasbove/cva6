@@ -4,6 +4,7 @@
 ../../src/axi/src/axi_pkg.sv
 ../../src/axi/src/axi_intf.sv
 ../../src/axi/src/axi_test.sv
+../../src/fpu/src/fpnew_pkg.sv
 ../../include/ariane_pkg.sv
 ../../include/wt_cache_pkg.sv
 ../../src/fpga-support/rtl/SyncSpRamBeNx64.sv
@@ -13,7 +14,7 @@
 ../../src/cache_subsystem/wt_dcache_wbuffer.sv
 ../../src/cache_subsystem/wt_dcache.sv
 ../../src/common_cells/src/cf_math_pkg.sv
-../../src/common_cells/src/lfsr_8bit.sv
+../../src/common_cells/src/lfsr.sv
 ../../src/common_cells/src/fifo_v3.sv
 ../../src/common_cells/src/lzc.sv
 ../../src/common_cells/src/rr_arb_tree.sv
