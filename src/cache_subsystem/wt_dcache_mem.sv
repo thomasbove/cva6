@@ -28,6 +28,7 @@
 
 module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
   parameter bit          Axi64BitCompliant  = 1'b0, // set this to 1 when using in conjunction with 64bit AXI bus adapter
+  parameter int unsigned AxiDataWidth       = 0,
   parameter int unsigned NumPorts           = 3
 ) (
   input  logic                                              clk_i,
@@ -67,6 +68,10 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
   // forwarded wbuffer
   input wbuffer_t             [DCACHE_WBUF_DEPTH-1:0]       wbuffer_data_i
 );
+
+  // number of bits needed to address AXI data. Until 64 bit (processor dwidth) this is not needed.
+  // (Therefore lowe cap at 65 bit)
+  localparam AXI_OFFSET_WIDTH = AxiDataWidth <= 64 ? 4 : $clog2(AxiDataWidth/8);
 
   logic [DCACHE_NUM_BANKS-1:0]                                  bank_req;
   logic [DCACHE_NUM_BANKS-1:0]                                  bank_we;
@@ -231,7 +236,10 @@ module wt_dcache_mem import ariane_pkg::*; import wt_cache_pkg::*; #(
   assign wbuffer_be    = (|wbuffer_hit_oh) ? wbuffer_data_i[wbuffer_hit_idx].valid : '0;
 
   if (Axi64BitCompliant) begin : gen_axi_off
-      assign wr_cl_off     = (wr_cl_nc_i) ? '0 : wr_cl_off_i[DCACHE_OFFSET_WIDTH-1:3];
+      // In case of an uncached read, return the desired 64-bit segment of the most recent AXI read
+      assign wr_cl_off     = (wr_cl_nc_i) ? (AxiDataWidth <= 64) ? '0 :
+                              wr_cl_off_i[AXI_OFFSET_WIDTH-1:3] :
+                              wr_cl_off_i[DCACHE_OFFSET_WIDTH-1:3];
   end else begin  : gen_piton_off
       assign wr_cl_off     = wr_cl_off_i[DCACHE_OFFSET_WIDTH-1:3];
   end

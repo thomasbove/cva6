@@ -130,7 +130,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
   always_comb begin : p_axi_req
     // write channel
     axi_wr_id_in = arb_idx;
-    axi_wr_data  = dcache_data.data;
+    axi_wr_data  = {(AxiDataWidth/64){dcache_data.data}};
     axi_wr_addr  = {{64-riscv::PLEN{1'b0}}, dcache_data.paddr};
     axi_wr_size  = dcache_data.size;
     axi_wr_req   = 1'b0;
@@ -185,10 +185,10 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
             axi_wr_req   = 1'b1;
             axi_wr_be    = '0;
             unique case(dcache_data.size[1:0])
-              2'b00:   axi_wr_be[dcache_data.paddr[$clog2(AxiDataWidth)-1:0]]       = '1; // byte
-              2'b01:   axi_wr_be[dcache_data.paddr[$clog2(AxiDataWidth)-1:0] +:2 ]  = '1; // hword
-              2'b10:   axi_wr_be[dcache_data.paddr[$clog2(AxiDataWidth)-1:0] +:4 ]  = '1; // word
-              default: axi_wr_be                                                    = '1; // dword
+              2'b00:   axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0]]       = '1;  // byte
+              2'b01:   axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0] +:2 ]  = '1;  // hword
+              2'b10:   axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0] +:4 ]  = '1;  // word
+              default: axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0] +:8 ]  = '1; // dword                                                    = '1; // dword
             endcase
           end
           //////////////////////////////////////
@@ -202,10 +202,10 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
             axi_wr_req   = 1'b1;
             axi_wr_be    = '0;
             unique case(dcache_data.size[1:0])
-              2'b00:   axi_wr_be[dcache_data.paddr[$clog2(AxiDataWidth)-1:0]]       = '1; // byte
-              2'b01:   axi_wr_be[dcache_data.paddr[$clog2(AxiDataWidth)-1:0] +:2 ]  = '1; // hword
-              2'b10:   axi_wr_be[dcache_data.paddr[$clog2(AxiDataWidth)-1:0] +:4 ]  = '1; // word
-              default: axi_wr_be                                                    = '1; // dword
+              2'b00:   axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0]]       = '1;  // byte
+              2'b01:   axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0] +:2 ]  = '1;  // hword
+              2'b10:   axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0] +:4 ]  = '1;  // word
+              default: axi_wr_be[0][dcache_data.paddr[$clog2(AxiDataWidth/8)-1:0] +:8 ]  = '1; // dword
             endcase
             amo_gen_r_d  = 1'b1;
             // need to use a separate ID here, so concat an additional bit
@@ -236,7 +236,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
               AMO_ADD:  axi_wr_atop  = {axi_pkg::ATOP_ATOMICLOAD, axi_pkg::ATOP_LITTLE_END, axi_pkg::ATOP_ADD};
               AMO_AND:  begin
                 // in this case we need to invert the data to get a "CLR"
-                axi_wr_data  = ~dcache_data.data;
+                axi_wr_data  = ~{(AxiDataWidth/64){dcache_data.data}};
                 axi_wr_atop  = {axi_pkg::ATOP_ATOMICLOAD, axi_pkg::ATOP_LITTLE_END, axi_pkg::ATOP_CLR};
               end
               AMO_OR:   axi_wr_atop  = {axi_pkg::ATOP_ATOMICLOAD, axi_pkg::ATOP_LITTLE_END, axi_pkg::ATOP_SET};
