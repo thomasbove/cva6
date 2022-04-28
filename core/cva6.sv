@@ -28,6 +28,7 @@ module cva6 import ariane_pkg::*; #(
   parameter int unsigned AxiAddrWidth = ariane_axi::AddrWidth,
   parameter int unsigned AxiDataWidth = ariane_axi::DataWidth,
   parameter int unsigned AxiIdWidth   = ariane_axi::IdWidth,
+  parameter int unsigned AxiUserWidth = ariane_axi::UserWidth,
   parameter type axi_ar_chan_t = ariane_axi::ar_chan_t,
   parameter type axi_aw_chan_t = ariane_axi::aw_chan_t,
   parameter type axi_w_chan_t  = ariane_axi::w_chan_t,
@@ -789,6 +790,7 @@ module cva6 import ariane_pkg::*; #(
     .AxiAddrWidth          ( AxiAddrWidth                ),
     .AxiDataWidth          ( AxiDataWidth                ),
     .AxiIdWidth            ( AxiIdWidth                  ),
+    .AxiUserWidth          ( AxiUserWidth                ),
     .axi_ar_chan_t         ( axi_ar_chan_t               ),
     .axi_aw_chan_t         ( axi_aw_chan_t               ),
     .axi_w_chan_t          ( axi_w_chan_t                ),
@@ -803,6 +805,7 @@ module cva6 import ariane_pkg::*; #(
     .busy_o                ( busy_cache_ctrl             ),
     .stall_i               ( stall_ctrl_cache            ),
     .init_ni               ( init_ctrl_cache_n           ),
+    .hart_id_i             ( hart_id_i                   ),
     // SRAM config
     .sram_cfg_idata_i        ( sram_cfg_idata_i          ),
     .sram_cfg_itag_i         ( sram_cfg_itag_i           ),
