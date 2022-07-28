@@ -10,27 +10,33 @@ package:
 export_include_dirs:
   - common/submodules/common_cells/include/
   - corev_apu/axi/include/
+  - corev_apu/register_interface/include/
 
 sources:
   - defines:
       WT_DCACHE: 1
     files:
     # Packages
+    - core/include/cv64a6_imafdc_sv39_config_pkg.sv
     - core/include/riscv_pkg.sv
     - corev_apu/riscv-dbg/src/dm_pkg.sv
+    - core/fpu/src/fpnew_pkg.sv
     - core/include/ariane_pkg.sv
     - core/include/wt_cache_pkg.sv
     - corev_apu/axi/src/axi_pkg.sv
     - corev_apu/register_interface/src/reg_intf.sv
-    - corev_apu/register_interface/src/reg_intf_pkg.sv
     - core/include/axi_intf.sv
     - corev_apu/tb/ariane_soc_pkg.sv
     - corev_apu/tb/ariane_axi_soc_pkg.sv
     - core/include/ariane_axi_pkg.sv
     - core/include/std_cache_pkg.sv
-    - core/fpu/src/fpnew_pkg.sv
     - core/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
+    - core/include/cvxif_pkg.sv
+    - core/cvxif_example/include/cvxif_instr_pkg.sv
+    - core/include/ariane_rvfi_pkg.sv
+    - core/include/instr_tracer_pkg.sv
     # Stand-alone source files
+    - core/cva6.sv
     - core/ariane.sv
     - core/serdiv.sv
     - core/ariane_regfile_ff.sv
@@ -38,12 +44,15 @@ sources:
     - core/id_stage.sv
     - core/branch_unit.sv
     - core/instr_realign.sv
+    - core/lsu_bypass.sv
     - core/load_store_unit.sv
     - core/controller.sv
     - core/issue_stage.sv
     - core/re_name.sv
     - core/csr_buffer.sv
-    - core/mmu_sv32/cva6_tlb_sv32.sv
+    - core/cvxif_example/instr_decoder.sv
+    - core/cvxif_example/cvxif_example_coprocessor.sv
+    # - core/mmu_sv32/cva6_tlb_sv32.sv
     - core/mmu_sv39/tlb.sv
     - core/decoder.sv
     - core/scoreboard.sv
@@ -58,15 +67,16 @@ sources:
     - core/store_buffer.sv
     - core/compressed_decoder.sv
     - core/axi_shim.sv
+    - core/cvxif_fu.sv
     - core/ex_stage.sv
     - core/mmu_sv39/mmu.sv
     - core/mmu_sv39/ptw.sv
     - core/mult.sv
-    - core/mmu_sv32/cva6_mmu_sv32.sv
-    - core/mmu_sv32/cva6_ptw_sv32.sv
+    # - core/mmu_sv32/cva6_mmu_sv32.sv
+    # - core/mmu_sv32/cva6_ptw_sv32.sv
     - core/load_unit.sv
     - core/issue_read_operands.sv
-    - src/accel_dispatcher.sv
+    - core/acc_dispatcher.sv
     - core/pmp/src/pmp_entry.sv
     - core/pmp/src/pmp.sv
     - core/fpu/src/fpnew_fma.sv
@@ -93,6 +103,7 @@ sources:
     - core/frontend/bht.sv
     - core/frontend/btb.sv
     - core/frontend/ras.sv
+    - common/local/util/tc_sram_wrapper.sv
     - core/cache_subsystem/tag_cmp.sv
     - core/cache_subsystem/cache_ctrl.sv
     - core/cache_subsystem/amo_alu.sv
@@ -187,8 +198,8 @@ sources:
     - common/submodules/common_cells/src/exp_backoff.sv
     - common/submodules/common_cells/src/addr_decode.sv
     - common/submodules/common_cells/src/stream_register.sv
-    - corev_apu/src/tech_cells_generic/src/cluster_clock_inverter.sv
-    - corev_apu/src/tech_cells_generic/src/pulp_clock_mux2.sv
+    # - corev_apu/src/tech_cells_generic/src/cluster_clock_inverter.sv
+    # - corev_apu/src/tech_cells_generic/src/pulp_clock_mux2.sv
     - target: not(cv32a6)
       files:
       - core/include/cv64a6_imafdc_sv39_config_pkg.sv
