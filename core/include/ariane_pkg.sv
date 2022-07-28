@@ -424,7 +424,7 @@ package ariane_pkg;
         CSR,       // 6
         FPU,       // 7
         FPU_VEC,   // 8
-        CVXIF      // 9
+        CVXIF,     // 9
         ACCEL      // 10
     } fu_t;
 
