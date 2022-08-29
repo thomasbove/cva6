@@ -14,7 +14,8 @@
 
 
 module ariane import ariane_pkg::*; #(
-  parameter ariane_pkg::ariane_cfg_t ArianeCfg     = ariane_pkg::ArianeDefaultConfig
+  parameter ariane_pkg::ariane_cfg_t ArianeCfg     = ariane_pkg::ArianeDefaultConfig,
+  parameter int unsigned NumInterruptSrc           = 256
 ) (
   input  logic                         clk_i,
   input  logic                         rst_ni,
@@ -23,10 +24,10 @@ module ariane import ariane_pkg::*; #(
   input  logic [riscv::XLEN-1:0]       hart_id_i,    // hart id in a multicore environment (reflected in a CSR)
 
   // Interrupt inputs
-  input  logic [1:0]                   irq_i,        // level sensitive IR lines, mip & sip (async)
-  input  logic                         ipi_i,        // inter-processor interrupts (async)
-  // Timer facilities
-  input  logic                         time_irq_i,   // timer interrupt in (async)
+  input  logic [NumInterruptSrc-1:0]   irq_i,       // interrupt source, onehot encoded (req + id information)
+  input  logic [7:0]                   irq_level_i, // interrupt level is 8-bit from CLIC spec
+  input  logic                         irq_shv_i,   // selective hardware vectoring bit
+  input  logic                         irq_ack_o,
   input  logic                         debug_req_i,  // debug request (async)
 `ifdef FIRESIM_TRACE
   // firesim trace port
@@ -52,15 +53,18 @@ module ariane import ariane_pkg::*; #(
   cvxif_pkg::cvxif_resp_t cvxif_resp;
 
   cva6 #(
-    .ArianeCfg  ( ArianeCfg )
+    .ArianeCfg      (ArianeCfg),
+    .NumInterruptSrc(NumInterruptSrc)
   ) i_cva6 (
     .clk_i                ( clk_i                     ),
     .rst_ni               ( rst_ni                    ),
     .boot_addr_i          ( boot_addr_i               ),
     .hart_id_i            ( hart_id_i                 ),
-    .irq_i                ( irq_i                     ),
-    .ipi_i                ( ipi_i                     ),
-    .time_irq_i           ( time_irq_i                ),
+    // Interrupt interface to core
+    .irq_i                ( core_irq_onehot           ),
+    .irq_level_i          ( core_irq_level            ),
+    .irq_shv_i            ( core_irq_shv              ),
+    .irq_ack_o            ( core_irq_ack              ),
     .debug_req_i          ( debug_req_i               ),
 `ifdef FIRESIME_TRACE
     .trace_o              ( trace_o                   ),

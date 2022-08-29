@@ -399,6 +399,27 @@ package ariane_pkg;
       logic        global_enable;
     } irq_ctrl_t;
 
+    // Interrupt status (clic) M-mode
+    typedef struct packed {
+      logic [31:24] mil;
+      logic [23:16] reserved;
+      logic [15:8]  sil;
+      logic [7:0]   uil;
+    } Mintstatus_t;
+
+    // Interrupt status (clic) S-mode
+    typedef struct packed {
+      logic [31:16] reserved;
+      logic [15:8]  sil;
+      logic [7:0]   uil;
+    } Sintstatus_t;
+
+    // Interrupt status (clic) U-mode
+    typedef struct packed {
+      logic [31:8]  reserved;
+      logic [7:0]   uil;
+    } Uintstatus_t;
+
     // ---------------
     // Cache config
     // ---------------

@@ -19,7 +19,9 @@
 //              This also includes all the forwarding logic
 //
 
-module decoder import ariane_pkg::*; (
+module decoder import ariane_pkg::*; #(
+    parameter int unsigned NumInterruptSrc = 256
+)(
     input  logic               debug_req_i,             // external debug request
     input  logic [riscv::VLEN-1:0] pc_i,                // PC from IF
     input  logic               is_compressed_i,         // is a compressed instruction
@@ -28,7 +30,9 @@ module decoder import ariane_pkg::*; (
     input  logic [31:0]        instruction_i,           // instruction from IF
     input  branchpredict_sbe_t branch_predict_i,
     input  exception_t         ex_i,                    // if an exception occured in if
-    input  logic [1:0]         irq_i,                   // external interrupt
+    input  logic               irq_req_i,               // interrupt request
+    input  logic               irq_id_i,                // interrupt id
+    input  logic [7:0]         irq_level_i,             // interrupt level
     input  irq_ctrl_t          irq_ctrl_i,              // interrupt control and status information from CSRs
     // From CSR
     input  riscv::priv_lvl_t   priv_lvl_i,              // current privilege level
@@ -39,7 +43,8 @@ module decoder import ariane_pkg::*; (
     input  logic               tw_i,                    // timeout wait
     input  logic               tsr_i,                   // trap sret
     output scoreboard_entry_t  instruction_o,           // scoreboard entry to scoreboard
-    output logic               is_control_flow_instr_o  // this instruction will change the control flow
+    output logic               is_control_flow_instr_o, // this instruction will change the control flow
+    output logic               irq_ack_o
 );
     logic illegal_instr;
     logic illegal_instr_bm;
