@@ -666,7 +666,8 @@ module csr_regfile import ariane_pkg::*; #(
             // a m-mode trap might be delegated if we are taking it in S mode
             // first figure out if this was an exception or an interrupt e.g.: look at bit (XLEN-1)
             // the cause register can only be $clog2(riscv::XLEN) bits long (as we only support XLEN exceptions)
-            if ((ex_i.cause[riscv::XLEN-1] && mideleg_q[ex_i.cause[$clog2(riscv::XLEN)-1:0]]) ||
+            // In CLIC mode, xideleg ceases to have effect.
+            if ((ex_i.cause[riscv::XLEN-1] && mideleg_q[ex_i.cause[$clog2(riscv::XLEN)-1:0]] && ~clic_mode) ||
                 (~ex_i.cause[riscv::XLEN-1] && medeleg_q[ex_i.cause[$clog2(riscv::XLEN)-1:0]])) begin
                 // traps never transition from a more-privileged mode to a less privileged mode
                 // so if we are already in M mode, stay there

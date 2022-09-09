@@ -1153,7 +1153,8 @@ module decoder import ariane_pkg::*; (
                 // However, if bit i in mideleg is set, interrupts are considered to be globally enabled if the hart’s current privilege
                 // mode equals the delegated privilege mode (S or U) and that mode’s interrupt enable bit
                 // (SIE or UIE in mstatus) is set, or if the current privilege mode is less than the delegated privilege mode.
-                if (irq_ctrl_i.mideleg[interrupt_cause[$clog2(riscv::XLEN)-1:0]]) begin
+                // In CLIC mode, xideleg ceases to have effect.
+                if (irq_ctrl_i.mideleg[interrupt_cause[$clog2(riscv::XLEN)-1:0]] && !clic_mode) begin
                     if ((irq_ctrl_i.sie && priv_lvl_i == riscv::PRIV_LVL_S) || priv_lvl_i == riscv::PRIV_LVL_U) begin
                         instruction_o.ex.valid = 1'b1;
                         instruction_o.ex.cause = interrupt_cause;
