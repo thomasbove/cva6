@@ -209,8 +209,8 @@ module csr_regfile import ariane_pkg::*; #(
                 riscv::CSR_SSTATUS: begin
                     csr_rdata = mstatus_extended & ariane_pkg::SMODE_STATUS_READ_MASK[riscv::XLEN-1:0];
                 end
-                riscv::CSR_SIE:                csr_rdata = mie_q & mideleg_q;
-                riscv::CSR_SIP:                csr_rdata = mip_q & mideleg_q;
+                riscv::CSR_SIE:                csr_rdata = clic_mode ? '0 : (mie_q & mideleg_q);
+                riscv::CSR_SIP:                csr_rdata = clic_mode ? '0 : (mip_q & mideleg_q);
                 riscv::CSR_STVEC:              csr_rdata = stvec_q;
                 riscv::CSR_SCOUNTEREN:         csr_rdata = scounteren_q;
                 riscv::CSR_SSCRATCH:           csr_rdata = sscratch_q;
@@ -230,14 +230,14 @@ module csr_regfile import ariane_pkg::*; #(
                 riscv::CSR_MISA:               csr_rdata = ISA_CODE;
                 riscv::CSR_MEDELEG:            csr_rdata = medeleg_q;
                 riscv::CSR_MIDELEG:            csr_rdata = mideleg_q;
-                riscv::CSR_MIE:                csr_rdata = mie_q;
+                riscv::CSR_MIE:                csr_rdata = clic_mode ? '0 : mie_q;
                 riscv::CSR_MTVEC:              csr_rdata = mtvec_q;
                 riscv::CSR_MCOUNTEREN:         csr_rdata = mcounteren_q;
                 riscv::CSR_MSCRATCH:           csr_rdata = mscratch_q;
                 riscv::CSR_MEPC:               csr_rdata = mepc_q;
                 riscv::CSR_MCAUSE:             csr_rdata = mcause_q;
                 riscv::CSR_MTVAL:              csr_rdata = mtval_q;
-                riscv::CSR_MIP:                csr_rdata = mip_q;
+                riscv::CSR_MIP:                csr_rdata = clic_mode ? '0 : mip_q;
                 riscv::CSR_MVENDORID:          csr_rdata = '0; // not implemented
                 riscv::CSR_MARCHID:            csr_rdata = ARIANE_MARCHID;
                 riscv::CSR_MIMPID:             csr_rdata = '0; // not implemented
@@ -468,14 +468,20 @@ module csr_regfile import ariane_pkg::*; #(
                 // even machine mode interrupts can be visible and set-able to supervisor
                 // if the corresponding bit in mideleg is set
                 riscv::CSR_SIE: begin
-                    // the mideleg makes sure only delegate-able register (and therefore also only implemented registers) are written
-                    mie_d = (mie_q & ~mideleg_q) | (csr_wdata & mideleg_q);
+                    // In CLIC mode, writes to SIE are ignored.
+                    if (!clic_mode) begin
+                        // the mideleg makes sure only delegate-able register (and therefore also only implemented registers) are written
+                        mie_d = (mie_q & ~mideleg_q) | (csr_wdata & mideleg_q);
+                    end
                 end
 
                 riscv::CSR_SIP: begin
-                    // only the supervisor software interrupt is write-able, iff delegated
-                    mask = riscv::MIP_SSIP & mideleg_q;
-                    mip_d = (mip_q & ~mask) | (csr_wdata & mask);
+                    // In CLIC mode, writes to SIP are ignored.
+                    if (!clic_mode) begin
+                        // only the supervisor software interrupt is write-able, iff delegated
+                        mask = riscv::MIP_SSIP & mideleg_q;
+                        mip_d = (mip_q & ~mask) | (csr_wdata & mask);
+                    end
                 end
 
                 riscv::CSR_STVEC:              stvec_d     = {csr_wdata[riscv::XLEN-1:2], 1'b0, csr_wdata[0]};
@@ -533,8 +539,11 @@ module csr_regfile import ariane_pkg::*; #(
                 end
                 // mask the register so that unsupported interrupts can never be set
                 riscv::CSR_MIE: begin
-                    mask = riscv::MIP_SSIP | riscv::MIP_STIP | riscv::MIP_SEIP | riscv::MIP_MSIP | riscv::MIP_MTIP | riscv::MIP_MEIP;
-                    mie_d = (mie_q & ~mask) | (csr_wdata & mask); // we only support supervisor and M-mode interrupts
+                    // In CLIC mode, writes to MIE are ignored.
+                    if (!clic_mode) begin
+                        mask = riscv::MIP_SSIP | riscv::MIP_STIP | riscv::MIP_SEIP | riscv::MIP_MSIP | riscv::MIP_MTIP | riscv::MIP_MEIP;
+                        mie_d = (mie_q & ~mask) | (csr_wdata & mask); // we only support supervisor and M-mode interrupts
+                    end
                 end
 
                 riscv::CSR_MTVEC: begin
@@ -550,8 +559,11 @@ module csr_regfile import ariane_pkg::*; #(
                 riscv::CSR_MCAUSE:             mcause_d    = csr_wdata;
                 riscv::CSR_MTVAL:              mtval_d     = csr_wdata;
                 riscv::CSR_MIP: begin
-                    mask = riscv::MIP_SSIP | riscv::MIP_STIP | riscv::MIP_SEIP;
-                    mip_d = (mip_q & ~mask) | (csr_wdata & mask);
+                    // In CLIC mode, writes to MIP are ignored.
+                    if (!clic_mode) begin
+                        mask = riscv::MIP_SSIP | riscv::MIP_STIP | riscv::MIP_SEIP;
+                        mip_d = (mip_q & ~mask) | (csr_wdata & mask);
+                    end
                 end
                 // performance counters
                 riscv::CSR_MCYCLE:             cycle_d     = csr_wdata;
