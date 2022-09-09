@@ -12,7 +12,7 @@
 // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
 module ariane_xilinx # (
-    parameter int unsigned CLIC = 0,
+  parameter int unsigned CLIC = 0,
 )(
 `ifdef GENESYSII
   input  logic         sys_clk_p   ,
@@ -313,8 +313,8 @@ axi_node_wrap_with_slices #(
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1,
-        ariane_soc::DRAMBase     + cva6_ariane_soc::DRAMLength - 1,
-        ariane_soc::CLICBase     + cva6_ariane_soc::CLICLength - 1
+        ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1,
+        ariane_soc::CLICBase     + ariane_soc::CLICLength - 1
     }),
     .valid_rule_i (ariane_soc::ValidRule)
 );
@@ -592,7 +592,7 @@ if (CLIC) begin : clic_plic
       .ipi_o       (                ) // use the clic for machine software interrupt
   );
 
-  axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_resp_i(axi_clint_resp), .slave(master[cva6_ariane_soc::CLINT]));
+  axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_resp_i(axi_clint_resp), .slave(master[ariane_soc::CLINT]));
 
 end else begin : clint_plic // legacy clint + plic, ariane not in CLIC mode
 
@@ -649,7 +649,7 @@ end else begin : clint_plic // legacy clint + plic, ariane not in CLIC mode
       .ipi_o       ( ipi            )
   );
 
-  axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_resp_i(axi_clint_resp), .slave(master[cva6_ariane_soc::CLINT]));
+  axi_slave_connect i_axi_slave_connect_clint (.axi_req_o(axi_clint_req), .axi_resp_i(axi_clint_resp), .slave(master[ariane_soc::CLINT]));
 end // block: clint_plic
     
 // ---------------
