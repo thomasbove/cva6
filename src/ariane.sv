@@ -180,6 +180,7 @@ module ariane import ariane_pkg::*; #(
   logic                     tw_csr_id;
   logic                     tsr_csr_id;
   irq_ctrl_t                irq_ctrl_csr_id;
+  logic                     clic_mode;
   logic                     dcache_en_csr_nbdcache;
   logic                     csr_write_fflags_commit_cs;
   logic                     icache_en_csr;
@@ -523,6 +524,7 @@ module ariane import ariane_pkg::*; #(
     .frm_o                  ( frm_csr_id_issue_ex           ),
     .fprec_o                ( fprec_csr_ex                  ),
     .irq_ctrl_o             ( irq_ctrl_csr_id               ),
+    .clic_mode_o            ( clic_mode                     ),
     .ld_st_priv_lvl_o       ( ld_st_priv_lvl_csr_ex         ),
     .en_translation_o       ( enable_translation_csr_ex     ),
     .en_ld_st_translation_o ( en_ld_st_translation_csr_ex   ),
@@ -546,6 +548,7 @@ module ariane import ariane_pkg::*; #(
     .debug_req_i,
     .ipi_i,
     .irq_i,
+    .irq_shv_i,
     .time_irq_i,
     .*
   );
