@@ -288,6 +288,7 @@ module ariane import ariane_pkg::*; #(
     .irq_i                      ( irq_i                      ),
     .irq_level_i                ( irq_level_i                ),
     .irq_ctrl_i                 ( irq_ctrl_csr_id            ),
+    .clic_mode_i                ( clic_mode                  ),
     .debug_mode_i               ( debug_mode                 ),
     .tvm_i                      ( tvm_csr_id                 ),
     .tw_i                       ( tw_csr_id                  ),

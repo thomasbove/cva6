@@ -30,6 +30,11 @@ module decoder import ariane_pkg::*; (
     input  exception_t         ex_i,                    // if an exception occured in if
     input  logic [1:0]         irq_i,                   // external interrupt
     input  irq_ctrl_t          irq_ctrl_i,              // interrupt control and status information from CSRs
+    input  logic               irq_req_ctrl_i,
+    input  logic [$clog2(NumInterruptSrc)-1:0] irq_id_ctrl_i,
+    input  logic [7:0]         irq_level_ctrl_i,
+    output logic               irq_ack_o,
+    input  logic               clic_mode_i,
     // From CSR
     input  riscv::priv_lvl_t   priv_lvl_i,              // current privilege level
     input  logic               debug_mode_i,            // we are in debug mode
@@ -1059,17 +1064,17 @@ module decoder import ariane_pkg::*; (
     // ---------------------
     riscv::xlen_t interrupt_cause;
 
-    logic [$clog(cva6_ariane_pkg::NumInterruptSrc)-1] irq_id;
-    logic irq_req;
+    // logic [$clog(cva6_ariane_pkg::NumInterruptSrc)-1] irq_id;
+    // logic irq_req;
 
-    lsz #(
-        .WIDTH ( cva6_ariane_pkg::NumInterruptSrc ),
-        .MODE  ( 0                                )
-    ) lsz_irq (
-        .in_i    ( irq_i    ),
-        .cnt_o   ( irq_id   ),
-        .empty_o ( ~irq_req )
-     );
+    // lsz #(
+    //     .WIDTH ( cva6_ariane_pkg::NumInterruptSrc ),
+    //     .MODE  ( 0                                )
+    // ) lsz_irq (
+    //     .in_i    ( irq_i    ),
+    //     .cnt_o   ( irq_id   ),
+    //     .empty_o ( ~irq_req )
+    //  );
 
     // this instruction has already executed if the exception is valid
     assign instruction_o.valid   = instruction_o.ex.valid;
@@ -1114,10 +1119,10 @@ module decoder import ariane_pkg::*; (
             // -----------------
             // we decode an interrupt the same as an exception, hence it will be taken if the instruction did not
             // throw any previous exception.
-            if (clic_mode && irq_req) begin
+            if (clic_mode_i && irq_req_ctrl_i) begin
                 // CLIC mode: Acknowledge the interrupt. Set interrupt bit and 
                 irq_ack_o       = 1'b1;
-                interrupt_cause = {1'b1, {riscv::XLEN-$clog2(cva6_ariane_pkg::NumInterruptSrc)-1{1'b0}}, irq_id};
+                interrupt_cause = {1'b1, {riscv::XLEN-$clog2(cva6_ariane_pkg::NumInterruptSrc)-1{1'b0}}, irq_id_ctrl_i};
             end else begin
                 // we have three interrupt sources: external interrupts, software interrupts, timer interrupts (order of precedence)
                 // for two privilege levels: Supervisor and Machine Mode
@@ -1154,7 +1159,7 @@ module decoder import ariane_pkg::*; (
                 // mode equals the delegated privilege mode (S or U) and that mode’s interrupt enable bit
                 // (SIE or UIE in mstatus) is set, or if the current privilege mode is less than the delegated privilege mode.
                 // In CLIC mode, xideleg ceases to have effect.
-                if (irq_ctrl_i.mideleg[interrupt_cause[$clog2(riscv::XLEN)-1:0]] && !clic_mode) begin
+                if (irq_ctrl_i.mideleg[interrupt_cause[$clog2(riscv::XLEN)-1:0]] && !clic_mode_i) begin
                     if ((irq_ctrl_i.sie && priv_lvl_i == riscv::PRIV_LVL_S) || priv_lvl_i == riscv::PRIV_LVL_U) begin
                         instruction_o.ex.valid = 1'b1;
                         instruction_o.ex.cause = interrupt_cause;

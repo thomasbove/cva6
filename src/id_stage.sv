@@ -38,6 +38,7 @@ module id_stage import ariane_soc_pkg::*; (
     input  ariane_pkg::Mintstatus_t       mintstatus_i,        // interrupt status
     output logic                          irq_ack_o,           // core side interrupt handshake (ready)
     input  ariane_pkg::irq_ctrl_t         irq_ctrl_i,
+    input  logic                          clic_mode_i,
     input  logic                          debug_mode_i,        // we are in debug mode
     input  logic                          tvm_i,
     input  logic                          tw_i,
@@ -118,6 +119,7 @@ module id_stage import ariane_soc_pkg::*; (
         .irq_id_ctrl_i           ( irq_id_ctrl                     ),
         .irq_level_ctrl_i        ( irq_level_ctrl                  ),
         .irq_ack_o,
+        .clic_mode_i,
         .pc_i                    ( fetch_entry_i.address           ),
         .is_compressed_i         ( is_compressed                   ),
         .is_illegal_i            ( is_illegal                      ),
