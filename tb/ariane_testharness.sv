@@ -25,7 +25,7 @@ module ariane_testharness #(
   parameter int unsigned NUM_WORDS         = 2**25,         // memory size
   parameter bit          StallRandomOutput = 1'b0,
   parameter bit          StallRandomInput  = 1'b0,
-  parameter int unsigned CLIC              = 0,
+  parameter int unsigned CLIC              = 0
 ) (
   input  logic                           clk_i,
   input  logic                           rtc_i,
@@ -587,7 +587,7 @@ module ariane_testharness #(
       ariane_soc::SPIBase      + ariane_soc::SPILength - 1,
       ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
       ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
-      ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1
+      ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1,
       ariane_soc::CLICBase     + ariane_soc::CLICLength - 1
     })),
     .valid_rule_i (ariane_soc::ValidRule)
@@ -660,11 +660,11 @@ if (CLIC) begin : clic_plic
   logic [NumInterruptSrc-1:0] clic_irqs;                          // other local interrupts routed through the CLIC
 
   // core interface signals
-  logic                                 core_irq_req, core_irq_ack; // interrupt handshake
-  logic                                 core_irq_shv;               // selective hardware vectoring
-  logic [$clog2(NumInterruptsSrc)-1:0]  core_irq_id;                // interrupt id
-  logic [7:0]                           core_irq_level;             // interrupt level
-  logic [NumInterruptsSrc-1:0]          core_irq_onehot; // one-hot encoding
+  logic                                core_irq_req, core_irq_ack; // interrupt handshake
+  logic                                core_irq_shv;               // selective hardware vectoring
+  logic [$clog2(NumInterruptSrc)-1:0]  core_irq_id;                // interrupt id
+  logic [7:0]                          core_irq_level;             // interrupt level
+  logic [NumInterruptSrc-1:0]          core_irq_onehot; // one-hot encoding
                                                          // of interrupts, to
                                                          // the core
 
@@ -688,14 +688,14 @@ if (CLIC) begin : clic_plic
   // XLEN regular CLINT interrupts
   assign clint_irqs = {
     {(riscv::XLEN - 15){1'b0}}, // 64 - 15 = 48, designated for platform use
-    4{1'b0},                    // reserved
+    {4{1'b0}},                  // reserved
     seip,                       // seip
     1'b0,                       // reserved
     meip,                       // meip
     1'b0,                       // reserved, seip, reserved, meip
     mtip,                       // mtip
-    3{1'b0},                    // reserved, stip, reserved
-    4{1'b0}                     // reserved, ssip, reserved, msip
+    {3{1'b0}},                  // reserved, stip, reserved
+    {4{1'b0}}                   // reserved, ssip, reserved, msip
   };
 
   // local interrupts with CLIC
@@ -705,8 +705,8 @@ if (CLIC) begin : clic_plic
   };
 
   clic #(
-    .N_SOURCE  (ariane_soc_pkg::NumInterruptSrc),
-    .INTCTLBITS(ariane_soc_pkg::ClicIntCtlBits),
+    .N_SOURCE  (ariane_soc::NumInterruptSrc),
+    .INTCTLBITS(ariane_soc::ClicIntCtlBits),
     .reg_req_t (reg_a48_d32_req_t),
     .reg_rsp_t (reg_a48_d32_rsp_t)
   ) i_clic (
@@ -714,7 +714,7 @@ if (CLIC) begin : clic_plic
     .rst_ni,
     // Bus Interface
     .reg_req_i(soc_regbus_periph_xbar_out_req[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC]),
-    .reg_rsp_o(soc_regbus_periph_xbar_out_rsp[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC),
+    .reg_rsp_o(soc_regbus_periph_xbar_out_rsp[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC]),
     // Interrupt Sources
     .intr_src_i (clic_irqs),
     // Interrupt notification to core

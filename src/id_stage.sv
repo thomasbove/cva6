@@ -13,7 +13,7 @@
 // Description: Instruction decode, contains the logic for decode,
 //              issue and read operands.
 
-module id_stage import ariane_soc_pkg::*; (
+module id_stage import ariane_soc::*; (
     input  logic                          clk_i,
     input  logic                          rst_ni,
 

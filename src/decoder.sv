@@ -1122,7 +1122,7 @@ module decoder import ariane_pkg::*; (
             if (clic_mode_i && irq_req_ctrl_i) begin
                 // CLIC mode: Acknowledge the interrupt. Set interrupt bit and 
                 irq_ack_o       = 1'b1;
-                interrupt_cause = {1'b1, {riscv::XLEN-$clog2(cva6_ariane_pkg::NumInterruptSrc)-1{1'b0}}, irq_id_ctrl_i};
+                interrupt_cause = {1'b1, {riscv::XLEN-$clog2(ariane_soc::NumInterruptSrc)-1{1'b0}}, irq_id_ctrl_i};
             end else begin
                 // we have three interrupt sources: external interrupts, software interrupts, timer interrupts (order of precedence)
                 // for two privilege levels: Supervisor and Machine Mode
