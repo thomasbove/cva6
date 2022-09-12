@@ -181,6 +181,8 @@ module ariane import ariane_pkg::*; #(
   logic                     tsr_csr_id;
   irq_ctrl_t                irq_ctrl_csr_id;
   logic                     clic_mode;
+  riscv::intstatus_rv_t     mintstatus_csr_id;
+  logic [7:0]               mintthresh_csr_id;
   logic                     dcache_en_csr_nbdcache;
   logic                     csr_write_fflags_commit_cs;
   logic                     icache_en_csr;
@@ -287,6 +289,9 @@ module ariane import ariane_pkg::*; #(
     .frm_i                      ( frm_csr_id_issue_ex        ),
     .irq_i                      ( irq_i                      ),
     .irq_level_i                ( irq_level_i                ),
+    .mintthresh_i               ( mintthresh_csr_id          ),
+    .mintstatus_i               ( mintstatus_csr_id          ),
+    .irq_ack_o                  ( irq_ack_o                  ),
     .irq_ctrl_i                 ( irq_ctrl_csr_id            ),
     .clic_mode_i                ( clic_mode                  ),
     .debug_mode_i               ( debug_mode                 ),
@@ -526,6 +531,8 @@ module ariane import ariane_pkg::*; #(
     .fprec_o                ( fprec_csr_ex                  ),
     .irq_ctrl_o             ( irq_ctrl_csr_id               ),
     .clic_mode_o            ( clic_mode                     ),
+    .mintstatus_o           ( mintstatus_csr_id             ),
+    .mintthresh_o           ( mintthresh_csr_id             ),
     .ld_st_priv_lvl_o       ( ld_st_priv_lvl_csr_ex         ),
     .en_translation_o       ( enable_translation_csr_ex     ),
     .en_ld_st_translation_o ( en_ld_st_translation_csr_ex   ),

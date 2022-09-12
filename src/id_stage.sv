@@ -35,7 +35,7 @@ module id_stage import ariane_soc::*; (
     input  logic [NumInterruptSrc-1:0]    irq_i,
     input  logic [7:0]                    irq_level_i,         // interrupt level
     input  logic [7:0]                    mintthresh_i,        // interrupt threshold
-    input  ariane_pkg::Mintstatus_t       mintstatus_i,        // interrupt status
+    input  ariane_pkg::intstatus_rv_t     mintstatus_i,        // interrupt status
     output logic                          irq_ack_o,           // core side interrupt handshake (ready)
     input  ariane_pkg::irq_ctrl_t         irq_ctrl_i,
     input  logic                          clic_mode_i,

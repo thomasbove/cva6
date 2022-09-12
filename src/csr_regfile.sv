@@ -70,6 +70,8 @@ module csr_regfile import ariane_pkg::*; #(
     input  logic                  ipi_i,                      // inter processor interrupt -> connected to machine mode sw
     input  logic                  debug_req_i,                // debug request in
     output logic                  clic_mode_o,                // CLIC mode
+    output riscv::intstatus_rv_t  mintstatus_o,
+    output logic [7:0]            mintthresh_o,
     output logic                  set_debug_pc_o,
     // Virtualization Support
     output logic                  tvm_o,                      // trap virtual memory
@@ -122,6 +124,7 @@ module csr_regfile import ariane_pkg::*; #(
     riscv::xlen_t mideleg_q,   mideleg_d;
     riscv::xlen_t mip_q,       mip_d;
     riscv::xlen_t mie_q,       mie_d;
+    riscv::intstatus_rv_t mintstatus_q, mintstatus_d;
     riscv::xlen_t mcounteren_q,mcounteren_d;
     riscv::xlen_t mscratch_q,  mscratch_d;
     riscv::xlen_t mepc_q,      mepc_d;
@@ -162,7 +165,8 @@ module csr_regfile import ariane_pkg::*; #(
     assign mstatus_extended = riscv::IS_XLEN64 ? mstatus_q[riscv::XLEN-1:0] :
                               {mstatus_q.sd, mstatus_q.wpri3[7:0], mstatus_q[22:0]};
 
-    assign clic_mode_o = &mtvec_q[1:0];
+    assign clic_mode_o  = &mtvec_q[1:0];
+    assign mintstatus_o = mintstatus_q;
 
     always_comb begin : csr_read_process
         // a read access exception can only occur if we attempt to read a CSR which does not exist
@@ -222,7 +226,14 @@ module csr_regfile import ariane_pkg::*; #(
                 riscv::CSR_STVT:               csr_rdata = stvt_q;
                 riscv::CSR_SSCRATCH:           csr_rdata = sscratch_q;
                 riscv::CSR_SEPC:               csr_rdata = sepc_q;
-                riscv::CSR_SCAUSE:             csr_rdata = scause_q;
+                riscv::CSR_SCAUSE:             begin
+                    csr_rdata = scause_q;
+                    // In CLIC mode, reading or writing mstatus fields spp/spie in mcause is
+                    // equivalent to reading or writing the homonymous field in mstatus.
+                    if (clic_mode_o) begin
+                        csr_data[29:27] = {1'b0, sstatus_q.spp, sstatus_q.spie};
+                    end
+                end
                 riscv::CSR_STVAL:              csr_rdata = stval_q;
                 riscv::CSR_SATP: begin
                     // intercept reads to SATP if in S-Mode and TVM is enabled
@@ -243,9 +254,23 @@ module csr_regfile import ariane_pkg::*; #(
                 riscv::CSR_MTVT:               csr_rdata = mtvt_q;
                 riscv::CSR_MSCRATCH:           csr_rdata = mscratch_q;
                 riscv::CSR_MEPC:               csr_rdata = mepc_q;
-                riscv::CSR_MCAUSE:             csr_rdata = mcause_q;
+                riscv::CSR_MCAUSE: begin
+                    csr_rdata = mcause_q;
+                    // In CLIC mode, reading or writing mstatus fields mpp/mpie in mcause is
+                    // equivalent to reading or writing the homonymous field in mstatus.
+                    if (clic_mode_o) begin
+                        csr_data[29:27] = {mstatus_q.mpp, mstatus_q.mpie};
+                    end
+                end
                 riscv::CSR_MTVAL:              csr_rdata = mtval_q;
                 riscv::CSR_MIP:                csr_rdata = clic_mode_o ? '0 : mip_q;
+                riscv::CSR_MINTSTATUS: begin
+                    if (clic_mode_o) begin
+                        csr_rdata = {{riscv::XLEN-32{1'b0}}, mintstatus_q};
+                    end else begin
+                        read_access_exception = 1'b1;
+                    end
+                end
                 riscv::CSR_MVENDORID:          csr_rdata = '0; // not implemented
                 riscv::CSR_MARCHID:            csr_rdata = ARIANE_MARCHID;
                 riscv::CSR_MIMPID:             csr_rdata = '0; // not implemented
@@ -378,6 +403,7 @@ module csr_regfile import ariane_pkg::*; #(
         mideleg_d               = mideleg_q;
         mip_d                   = mip_q;
         mie_d                   = mie_q;
+        mintstatus_d            = mintstatus_q;
         mepc_d                  = mepc_q;
         mcause_d                = mcause_q;
         mcounteren_d            = mcounteren_q;
@@ -728,6 +754,9 @@ module csr_regfile import ariane_pkg::*; #(
                 // save the previous privilege mode
                 mstatus_d.mpp  = priv_lvl_q;
                 mcause_d       = ex_i.cause;
+                // update the current and previous interrupt level
+                mintstatus_d.mil = ex_i.cause[23:16];
+                mcause_d[23:16]  = mintstatus_q.mil;
                 // set epc
                 mepc_d         = {{riscv::XLEN-riscv::VLEN{pc_i[riscv::VLEN-1]}},pc_i};
                 // set mtval or stval
@@ -1109,6 +1138,7 @@ module csr_regfile import ariane_pkg::*; #(
             mideleg_q              <= {riscv::XLEN{1'b0}};
             mip_q                  <= {riscv::XLEN{1'b0}};
             mie_q                  <= {riscv::XLEN{1'b0}};
+            mintstatus_q           <= 32'b0;
             mepc_q                 <= {riscv::XLEN{1'b0}};
             mcause_q               <= {riscv::XLEN{1'b0}};
             mcounteren_q           <= {riscv::XLEN{1'b0}};
@@ -1154,6 +1184,7 @@ module csr_regfile import ariane_pkg::*; #(
             mideleg_q              <= mideleg_d;
             mip_q                  <= mip_d;
             mie_q                  <= mie_d;
+            mintstatus_q           <= mintstatus_d;
             mepc_q                 <= mepc_d;
             mcause_q               <= mcause_d;
             mcounteren_q           <= mcounteren_d;
