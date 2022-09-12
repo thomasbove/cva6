@@ -11,9 +11,9 @@
 // Description: Xilinx FPGA top-level
 // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
-module ariane_xilinx # (
-  parameter int unsigned CLIC = 0,
-)(
+module ariane_xilinx #(
+  parameter int unsigned CLIC = 0
+) (
 `ifdef GENESYSII
   input  logic         sys_clk_p   ,
   input  logic         sys_clk_n   ,
@@ -455,16 +455,16 @@ if (CLIC) begin : clic_plic
   // Interrupt sources
   logic [riscv::XLEN-1:0] clint_irqs;                             // legacy XLEN clint interrupts, RISC-V
                                                                   // Privilege Spec. v. 20211203, pag. 39
-  logic [NumInterruptSrc-1:0] clic_irqs;                          // other local interrupts routed through the CLIC
+  logic [ariane_soc::NumInterruptSrc-1:0] clic_irqs;                          // other local interrupts routed through the CLIC
 
   // core interface signals
   logic                                 core_irq_req, core_irq_ack; // interrupt handshake
   logic                                 core_irq_shv;               // selective hardware vectoring
-  logic [$clog2(NumInterruptsSrc)-1:0]  core_irq_id;                // interrupt id
+  logic [$clog2(ariane_soc::NumInterruptSrc)-1:0] core_irq_id;     // interrupt id
   logic [7:0]                           core_irq_level;             // interrupt level
-  logic [NumInterruptsSrc-1:0]          core_irq_onehot; // one-hot encoding
-                                                         // of interrupts, to
-                                                         // the core
+  logic [ariane_soc::NumInterruptSrc-1:0]         core_irq_onehot; // one-hot encoding
+                                                                    // of interrupts, to
+                                                                    // the core
 
   // Machine and Supervisor External interrupts
   // External interrupts. When not in CLIC mode, they are seen as global
@@ -486,25 +486,25 @@ if (CLIC) begin : clic_plic
   // XLEN regular CLINT interrupts
   assign clint_irqs = {
     {(riscv::XLEN - 15){1'b0}}, // 64 - 15 = 48, designated for platform use
-    4{1'b0},                    // reserved
+    {4{1'b0}},                  // reserved
     seip,                       // seip
     1'b0,                       // reserved
     meip,                       // meip
     1'b0,                       // reserved, seip, reserved, meip
     mtip,                       // mtip
-    3{1'b0},                    // reserved, stip, reserved
-    4{1'b0}                     // reserved, ssip, reserved, msip
+    {3{1'b0}},                  // reserved, stip, reserved
+    {4{1'b0}}                   // reserved, ssip, reserved, msip
   };
 
   // local interrupts with CLIC
   assign clic_irqs = {
-    {(NumInterruptSrc - riscv::XLEN){1'b0}}, // 192, platform defined
+    {(ariane_soc::NumInterruptSrc - riscv::XLEN){1'b0}}, // 192, platform defined
     clint_irqs                               // 64  (XLEN regular clint interrupts)
   };
 
   clic #(
-    .N_SOURCE  (ariane_soc_pkg::NumInterruptSrc),
-    .INTCTLBITS(ariane_soc_pkg::ClicIntCtlBits),
+    .N_SOURCE  (ariane_soc::NumInterruptSrc),
+    .INTCTLBITS(ariane_soc::CLICIntCtlBits),
     .reg_req_t (reg_a48_d32_req_t),
     .reg_rsp_t (reg_a48_d32_rsp_t)
   ) i_clic (
@@ -512,7 +512,7 @@ if (CLIC) begin : clic_plic
     .rst_ni,
     // Bus Interface
     .reg_req_i(soc_regbus_periph_xbar_out_req[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC]),
-    .reg_rsp_o(soc_regbus_periph_xbar_out_rsp[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC),
+    .reg_rsp_o(soc_regbus_periph_xbar_out_rsp[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC]),
     // Interrupt Sources
     .intr_src_i (clic_irqs),
     // Interrupt notification to core
@@ -601,8 +601,7 @@ end else begin : clint_plic // legacy clint + plic, ariane not in CLIC mode
 
   ariane #(
       .CLIC      ( CLIC ),
-      .ArianeCfg ( ariane_soc::ArianeSocCfg ),
-
+      .ArianeCfg ( ariane_soc::ArianeSocCfg )
   ) i_ariane (
       .clk_i        ( clk                 ),
       .rst_ni       ( ndmreset_n          ),

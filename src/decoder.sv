@@ -31,7 +31,7 @@ module decoder import ariane_pkg::*; (
     input  logic [1:0]         irq_i,                   // external interrupt
     input  irq_ctrl_t          irq_ctrl_i,              // interrupt control and status information from CSRs
     input  logic               irq_req_ctrl_i,
-    input  logic [$clog2(NumInterruptSrc)-1:0] irq_id_ctrl_i,
+    input  logic [$clog2(ariane_soc::NumInterruptSrc)-1:0] irq_id_ctrl_i,
     input  logic [7:0]         irq_level_ctrl_i,
     output logic               irq_ack_o,
     input  logic               clic_mode_i,
