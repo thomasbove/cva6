@@ -35,7 +35,7 @@ module id_stage import ariane_soc::*; (
     input  logic [NumInterruptSrc-1:0]    irq_i,
     input  logic [7:0]                    irq_level_i,         // interrupt level
     input  logic [7:0]                    mintthresh_i,        // interrupt threshold
-    input  ariane_pkg::intstatus_rv_t     mintstatus_i,        // interrupt status
+    input  riscv::intstatus_rv_t          mintstatus_i,        // interrupt status
     output logic                          irq_ack_o,           // core side interrupt handshake (ready)
     input  ariane_pkg::irq_ctrl_t         irq_ctrl_i,
     input  logic                          clic_mode_i,
@@ -65,7 +65,7 @@ module id_stage import ariane_soc::*; (
     logic [7:0] irq_level, irq_level_ctrl;
     logic [$clog2(NumInterruptSrc)-1:0] irq_id_ctrl;
     // register all interrupt inputs
-    always_ff @(posedge clk, negedge rst_n) begin
+    always_ff @(posedge clk_i, negedge rst_ni) begin
       if (rst_ni == 1'b0) begin
         irq_q     <= '0;
         irq_level <= '0;

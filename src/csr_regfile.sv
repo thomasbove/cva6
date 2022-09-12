@@ -233,7 +233,7 @@ module csr_regfile import ariane_pkg::*; #(
                     // In CLIC mode, reading or writing mstatus fields spp/spie in mcause is
                     // equivalent to reading or writing the homonymous field in mstatus.
                     if (clic_mode_o) begin
-                        csr_data[29:27] = {1'b0, sstatus_q.spp, sstatus_q.spie};
+                        csr_rdata[29:27] = {1'b0, sstatus_q.spp, sstatus_q.spie};
                     end
                 end
                 riscv::CSR_STVAL:              csr_rdata = stval_q;
@@ -261,7 +261,7 @@ module csr_regfile import ariane_pkg::*; #(
                     // In CLIC mode, reading or writing mstatus fields mpp/mpie in mcause is
                     // equivalent to reading or writing the homonymous field in mstatus.
                     if (clic_mode_o) begin
-                        csr_data[29:27] = {mstatus_q.mpp, mstatus_q.mpie};
+                        csr_rdata[29:27] = {mstatus_q.mpp, mstatus_q.mpie};
                     end
                 end
                 riscv::CSR_MTVAL:              csr_rdata = mtval_q;
@@ -275,7 +275,7 @@ module csr_regfile import ariane_pkg::*; #(
                 end
                 riscv::CSR_MINTTHRESH: begin
                     if (clic_mode_o) begin
-                        csr_rdata = {{risc::XLEN-8{1'b0}}, mintthresh_q};
+                        csr_rdata = {{riscv::XLEN-8{1'b0}}, mintthresh_q};
                     end else begin
                         read_access_exception = 1'b1;
                     end

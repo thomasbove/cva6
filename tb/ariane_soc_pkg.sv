@@ -19,7 +19,7 @@ package ariane_soc;
 
   // CLIC
   localparam int unsigned NumInterruptSrc = 256;
-  localparam int unsigned CLICIntCtlBIts = 8;
+  localparam int unsigned CLICIntCtlBits = 8;
 
   localparam NrSlaves = 2; // actually masters, but slaves on the crossbar
 

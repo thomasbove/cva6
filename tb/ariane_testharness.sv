@@ -657,16 +657,16 @@ if (CLIC) begin : clic_plic
   // Interrupt sources
   logic [riscv::XLEN-1:0] clint_irqs;                             // legacy XLEN clint interrupts, RISC-V
                                                                   // Privilege Spec. v. 20211203, pag. 39
-  logic [NumInterruptSrc-1:0] clic_irqs;                          // other local interrupts routed through the CLIC
+  logic [ariane_soc::NumInterruptSrc-1:0] clic_irqs;                          // other local interrupts routed through the CLIC
 
   // core interface signals
-  logic                                core_irq_req, core_irq_ack; // interrupt handshake
-  logic                                core_irq_shv;               // selective hardware vectoring
-  logic [$clog2(NumInterruptSrc)-1:0]  core_irq_id;                // interrupt id
-  logic [7:0]                          core_irq_level;             // interrupt level
-  logic [NumInterruptSrc-1:0]          core_irq_onehot; // one-hot encoding
-                                                         // of interrupts, to
-                                                         // the core
+  logic                                           core_irq_req, core_irq_ack; // interrupt handshake
+  logic                                           core_irq_shv;               // selective hardware vectoring
+  logic [$clog2(ariane_soc::NumInterruptSrc)-1:0] core_irq_id;                // interrupt id
+  logic [7:0]                                     core_irq_level;             // interrupt level
+  logic [ariane_soc::NumInterruptSrc-1:0]         core_irq_onehot;            // one-hot encoding
+                                                                              // of interrupts, to
+                                                                              // the core
 
   // Machine and Supervisor External interrupts
   // External interrupts. When not in CLIC mode, they are seen as global
@@ -700,13 +700,13 @@ if (CLIC) begin : clic_plic
 
   // local interrupts with CLIC
   assign clic_irqs = {
-    {(NumInterruptSrc - riscv::XLEN){1'b0}}, // 192, platform defined
+    {(ariane_soc::NumInterruptSrc - riscv::XLEN){1'b0}}, // 192, platform defined
     clint_irqs                               // 64  (XLEN regular clint interrupts)
   };
 
   clic #(
     .N_SOURCE  (ariane_soc::NumInterruptSrc),
-    .INTCTLBITS(ariane_soc::ClicIntCtlBits),
+    .INTCTLBITS(ariane_soc::CLICIntCtlBits),
     .reg_req_t (reg_a48_d32_req_t),
     .reg_rsp_t (reg_a48_d32_rsp_t)
   ) i_clic (
@@ -772,15 +772,15 @@ if (CLIC) begin : clic_plic
   // clic, or remove the memory mapped registers for msip from the clint when
   // used in clic, because it is redundant.
 
-  logic mtip;
+  // logic mtip;
 
-  always_ff @(posedge clk or negedge ndmreset_n) begin
-    if (~ndmreset_n) begin
-      rtc <= 0;
-    end else begin
-      rtc <= rtc ^ 1'b1;
-    end
-  end
+  // always_ff @(posedge clk_i or negedge ndmreset_n) begin
+    // if (~ndmreset_n) begin
+      // rtc <= 0;
+    // end else begin
+      // rtc <= rtc ^ 1'b1;
+    // end
+  // end
 
   ariane_axi::req_t    axi_clint_req;
   ariane_axi::resp_t   axi_clint_resp;
@@ -808,34 +808,6 @@ if (CLIC) begin : clic_plic
   );
 
 end else begin : clint_plic // legacy clint + plic, ariane not in CLIC mode
-
-  ariane #(
-    .CLIC       ( CLIC ),
-    .ArianeCfg  ( ariane_soc::ArianeSocCfg )
-  ) i_ariane (
-    .clk_i                ( clk_i               ),
-    .rst_ni               ( ndmreset_n          ),
-    .boot_addr_i          ( ariane_soc::ROMBase ), // start fetching from ROM
-    .hart_id_i            ( '0                  ),
-    .irq_i                ( irqs                ),
-    .ipi_i                ( ipi                 ),
-    .time_irq_i           ( timer_irq           ),
-// Disable Debug when simulating with Spike
-`ifdef SPIKE_TANDEM
-    .debug_req_i          ( 1'b0                ),
-`else
-    .debug_req_i          ( debug_req_core      ),
-`endif
-    .axi_req_o            ( axi_ariane_req      ),
-    .axi_resp_i           ( axi_ariane_resp     )
-  );
-
-  axi_master_connect i_axi_master_connect_ariane (
-    .axi_req_i(axi_ariane_req),
-    .axi_resp_o(axi_ariane_resp),
-    .master(slave[0])
-  );
-
   // ---------------
   // CLINT
   // ---------------
@@ -867,6 +839,32 @@ end else begin : clint_plic // legacy clint + plic, ariane not in CLIC mode
     .slave(master[ariane_soc::CLINT])
   );
 
+  ariane #(
+    .CLIC       ( CLIC ),
+    .ArianeCfg  ( ariane_soc::ArianeSocCfg )
+  ) i_ariane (
+    .clk_i                ( clk_i               ),
+    .rst_ni               ( ndmreset_n          ),
+    .boot_addr_i          ( ariane_soc::ROMBase ), // start fetching from ROM
+    .hart_id_i            ( '0                  ),
+    .irq_i                ( irqs                ),
+    .ipi_i                ( ipi                 ),
+    .time_irq_i           ( timer_irq           ),
+// Disable Debug when simulating with Spike
+`ifdef SPIKE_TANDEM
+    .debug_req_i          ( 1'b0                ),
+`else
+    .debug_req_i          ( debug_req_core      ),
+`endif
+    .axi_req_o            ( axi_ariane_req      ),
+    .axi_resp_i           ( axi_ariane_resp     )
+  );
+
+  axi_master_connect i_axi_master_connect_ariane (
+    .axi_req_i(axi_ariane_req),
+    .axi_resp_o(axi_ariane_resp),
+    .master(slave[0])
+  );
 end // block: clint_plic
 
   // -------------
