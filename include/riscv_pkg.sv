@@ -103,6 +103,10 @@ package riscv;
     } intstatus_rv_t;
 
     typedef struct packed {
+        logic [7:0] th;
+    } intthresh_rv_t;
+
+    typedef struct packed {
         logic [ModeW-1:0] mode;
         logic [ASIDW-1:0] asid;
         logic [PPNW-1:0]  ppn;
@@ -360,6 +364,7 @@ package riscv;
         CSR_MCAUSE         = 12'h342,
         CSR_MTVAL          = 12'h343,
         CSR_MIP            = 12'h344,
+        CSR_MINTSTATUS     = 12'h346,
         CSR_MINTTHRESH     = 12'h347,
         CSR_PMPCFG0        = 12'h3A0,
         CSR_PMPCFG1        = 12'h3A1,

@@ -125,6 +125,7 @@ module csr_regfile import ariane_pkg::*; #(
     riscv::xlen_t mip_q,       mip_d;
     riscv::xlen_t mie_q,       mie_d;
     riscv::intstatus_rv_t mintstatus_q, mintstatus_d;
+    riscv::intthresh_rv_t mintthresh_q, mintthresh_d;
     riscv::xlen_t mcounteren_q,mcounteren_d;
     riscv::xlen_t mscratch_q,  mscratch_d;
     riscv::xlen_t mepc_q,      mepc_d;
@@ -167,6 +168,7 @@ module csr_regfile import ariane_pkg::*; #(
 
     assign clic_mode_o  = &mtvec_q[1:0];
     assign mintstatus_o = mintstatus_q;
+    assign mintthresh_o = mintthresh_q.th;
 
     always_comb begin : csr_read_process
         // a read access exception can only occur if we attempt to read a CSR which does not exist
@@ -267,6 +269,13 @@ module csr_regfile import ariane_pkg::*; #(
                 riscv::CSR_MINTSTATUS: begin
                     if (clic_mode_o) begin
                         csr_rdata = {{riscv::XLEN-32{1'b0}}, mintstatus_q};
+                    end else begin
+                        read_access_exception = 1'b1;
+                    end
+                end
+                riscv::CSR_MINTTHRESH: begin
+                    if (clic_mode_o) begin
+                        csr_rdata = {{risc::XLEN-8{1'b0}}, mintthresh_q};
                     end else begin
                         read_access_exception = 1'b1;
                     end
@@ -404,6 +413,7 @@ module csr_regfile import ariane_pkg::*; #(
         mip_d                   = mip_q;
         mie_d                   = mie_q;
         mintstatus_d            = mintstatus_q;
+        mintthresh_d            = mintthresh_q;
         mepc_d                  = mepc_q;
         mcause_d                = mcause_q;
         mcounteren_d            = mcounteren_q;
@@ -603,6 +613,13 @@ module csr_regfile import ariane_pkg::*; #(
                     if (!clic_mode_o) begin
                         mask = riscv::MIP_SSIP | riscv::MIP_STIP | riscv::MIP_SEIP;
                         mip_d = (mip_q & ~mask) | (csr_wdata & mask);
+                    end
+                end
+                riscv::CSR_MINTTHRESH: begin
+                    if (clic_mode_o) begin
+                        mintthresh_d.th = csr_wdata[7:0];
+                    end else begin
+                        update_access_exception = 1'b1;
                     end
                 end
                 // performance counters
@@ -1139,6 +1156,7 @@ module csr_regfile import ariane_pkg::*; #(
             mip_q                  <= {riscv::XLEN{1'b0}};
             mie_q                  <= {riscv::XLEN{1'b0}};
             mintstatus_q           <= 32'b0;
+            mintthresh_q           <= 8'b0;
             mepc_q                 <= {riscv::XLEN{1'b0}};
             mcause_q               <= {riscv::XLEN{1'b0}};
             mcounteren_q           <= {riscv::XLEN{1'b0}};
@@ -1185,6 +1203,7 @@ module csr_regfile import ariane_pkg::*; #(
             mip_q                  <= mip_d;
             mie_q                  <= mie_d;
             mintstatus_q           <= mintstatus_d;
+            mintthresh_q           <= mintthresh_d;
             mepc_q                 <= mepc_d;
             mcause_q               <= mcause_d;
             mcounteren_q           <= mcounteren_d;
