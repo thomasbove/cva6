@@ -41,7 +41,7 @@ package ariane_soc;
     CLIC     = 10
   } axi_slaves_t;
 
-  localparam NB_PERIPHERALS = Debug + 1;
+  localparam NB_PERIPHERALS = CLIC + 1;
 
 
   localparam logic[63:0] DebugLength    = 64'h1000;
