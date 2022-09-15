@@ -145,25 +145,35 @@ src :=  $(filter-out src/ariane_regfile.sv, $(wildcard src/*.sv))              \
         $(wildcard fpga/src/apb_timer/*.sv)                                    \
         $(wildcard fpga/src/axi_slice/src/*.sv)                                \
         $(wildcard src/axi_node/src/*.sv)                                      \
-        $(wildcard src/axi_riscv_atomics/src/*.sv)                             \
-        $(wildcard src/axi_mem_if/src/*.sv)                                    \
-        $(wildcard src/pmp/src/*.sv)                                           \
-        src/rv_plic/rtl/rv_plic_target.sv                                      \
-        src/rv_plic/rtl/rv_plic_gateway.sv                                     \
-        src/rv_plic/rtl/plic_regmap.sv                                         \
-        src/rv_plic/rtl/plic_top.sv                                            \
-        src/riscv-dbg/src/dmi_cdc.sv                                           \
-        src/riscv-dbg/src/dmi_jtag.sv                                          \
-        src/riscv-dbg/src/dmi_jtag_tap.sv                                      \
-        src/riscv-dbg/src/dm_csrs.sv                                           \
-        src/riscv-dbg/src/dm_mem.sv                                            \
-        src/riscv-dbg/src/dm_sba.sv                                            \
-        src/riscv-dbg/src/dm_top.sv                                            \
-        src/riscv-dbg/debug_rom/debug_rom.sv                                   \
-        src/register_interface/src/apb_to_reg.sv                               \
-        src/axi/src/axi_multicut.sv                                            \
-        src/common_cells/src/deprecated/generic_fifo.sv                        \
-        src/common_cells/src/deprecated/pulp_sync.sv                           \
+	$(wildcard src/axi_riscv_atomics/src/*.sv)                             \
+	$(wildcard src/axi_mem_if/src/*.sv)                                    \
+	$(wildcard src/pmp/src/*.sv)                                           \
+	src/rv_plic/rtl/rv_plic_target.sv                                      \
+	src/rv_plic/rtl/rv_plic_gateway.sv                                     \
+	src/rv_plic/rtl/plic_regmap.sv                                         \
+	src/rv_plic/rtl/plic_top.sv                                            \
+	src/clic/src/clic_reg_pkg.sv                                           \
+	src/clic/src/clic_reg_top.sv					       \
+	src/clic/src/clic_reg_adapter.sv				       \
+	src/clic/src/clic_gateway.sv					       \
+	src/clic/src/clic_target.sv					       \
+	src/clic/src/clic.sv						       \
+	src/riscv-dbg/src/dmi_cdc.sv                                           \
+	src/riscv-dbg/src/dmi_jtag.sv                                          \
+	src/riscv-dbg/src/dmi_jtag_tap.sv                                      \
+	src/riscv-dbg/src/dm_csrs.sv                                           \
+	src/riscv-dbg/src/dm_mem.sv                                            \
+	src/riscv-dbg/src/dm_sba.sv                                            \
+	src/riscv-dbg/src/dm_top.sv                                            \
+	src/riscv-dbg/debug_rom/debug_rom.sv                                   \
+	src/register_interface/src/apb_to_reg.sv                               \
+	src/register_interface/vendor/lowrisc_opentitan/src/prim_subreg.sv     \
+	src/register_interface/vendor/lowrisc_opentitan/src/prim_subreg_arb.sv \
+	src/register_interface/vendor/lowrisc_opentitan/src/prim_subreg_ext.sv \
+	src/register_interface/vendor/lowrisc_opentitan/src/prim_subreg_shadow.sv \
+	src/axi/src/axi_multicut.sv                                            \
+	src/common_cells/src/deprecated/generic_fifo.sv                        \
+	src/common_cells/src/deprecated/pulp_sync.sv                           \
         src/common_cells/src/deprecated/find_first_one.sv                      \
         src/common_cells/src/rstgen_bypass.sv                                  \
         src/common_cells/src/rstgen.sv                                         \
