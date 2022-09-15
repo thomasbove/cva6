@@ -12,7 +12,7 @@
 // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
 module ariane_xilinx #(
-  parameter int unsigned CLIC = 0
+  parameter int unsigned CLIC = 1
 ) (
 `ifdef GENESYSII
   input  logic         sys_clk_p   ,
@@ -477,7 +477,7 @@ if (CLIC) begin : clic_plic
   // When in CLIC mode, the timer interrupt is routed through the CLIC and not
   // directly to the HART
   localparam int unsigned NumTimerIrq = 1; // 1 target, cva6
-  logic [NumTimerIrq-1:0]    mtip;
+  logic mtip;
 
   // Machine Software interrupt
   // When in CLIC mode, msip can be fired by writing to the corresponding
@@ -502,17 +502,155 @@ if (CLIC) begin : clic_plic
     clint_irqs                               // 64  (XLEN regular clint interrupts)
   };
 
+  // axi2apb interface
+  logic         clic_penable;
+  logic         clic_pwrite;
+  logic [31:0]  clic_paddr;
+  logic         clic_psel;
+  logic [31:0]  clic_pwdata;
+  logic [31:0]  clic_prdata;
+  logic         clic_pready;
+  logic         clic_pslverr;
+
+  axi2apb_64_32 #(
+      .AXI4_ADDRESS_WIDTH ( AxiAddrWidth ),
+      .AXI4_RDATA_WIDTH   ( AxiDataWidth ),
+      .AXI4_WDATA_WIDTH   ( AxiDataWidth ),
+      .AXI4_ID_WIDTH      ( ariane_soc::IdWidthSlave ),
+      .AXI4_USER_WIDTH    ( 1             ),
+      .BUFF_DEPTH_SLAVE   ( 2             ),
+      .APB_ADDR_WIDTH     ( 32            )
+  ) i_axi2apb_64_32_plic (
+      .ACLK      ( clk_i          ),
+      .ARESETn   ( rst_ni         ),
+      .test_en_i ( 1'b0           ),
+      .AWID_i    ( master[ariane_soc::CLIC].aw_id     ),
+      .AWADDR_i  ( master[ariane_soc::CLIC].aw_addr   ),
+      .AWLEN_i   ( master[ariane_soc::CLIC].aw_len    ),
+      .AWSIZE_i  ( master[ariane_soc::CLIC].aw_size   ),
+      .AWBURST_i ( master[ariane_soc::CLIC].aw_burst  ),
+      .AWLOCK_i  ( master[ariane_soc::CLIC].aw_lock   ),
+      .AWCACHE_i ( master[ariane_soc::CLIC].aw_cache  ),
+      .AWPROT_i  ( master[ariane_soc::CLIC].aw_prot   ),
+      .AWREGION_i( master[ariane_soc::CLIC].aw_region ),
+      .AWUSER_i  ( master[ariane_soc::CLIC].aw_user   ),
+      .AWQOS_i   ( master[ariane_soc::CLIC].aw_qos    ),
+      .AWVALID_i ( master[ariane_soc::CLIC].aw_valid  ),
+      .AWREADY_o ( master[ariane_soc::CLIC].aw_ready  ),
+      .WDATA_i   ( master[ariane_soc::CLIC].w_data    ),
+      .WSTRB_i   ( master[ariane_soc::CLIC].w_strb    ),
+      .WLAST_i   ( master[ariane_soc::CLIC].w_last    ),
+      .WUSER_i   ( master[ariane_soc::CLIC].w_user    ),
+      .WVALID_i  ( master[ariane_soc::CLIC].w_valid   ),
+      .WREADY_o  ( master[ariane_soc::CLIC].w_ready   ),
+      .BID_o     ( master[ariane_soc::CLIC].b_id      ),
+      .BRESP_o   ( master[ariane_soc::CLIC].b_resp    ),
+      .BVALID_o  ( master[ariane_soc::CLIC].b_valid   ),
+      .BUSER_o   ( master[ariane_soc::CLIC].b_user    ),
+      .BREADY_i  ( master[ariane_soc::CLIC].b_ready   ),
+      .ARID_i    ( master[ariane_soc::CLIC].ar_id     ),
+      .ARADDR_i  ( master[ariane_soc::CLIC].ar_addr   ),
+      .ARLEN_i   ( master[ariane_soc::CLIC].ar_len    ),
+      .ARSIZE_i  ( master[ariane_soc::CLIC].ar_size   ),
+      .ARBURST_i ( master[ariane_soc::CLIC].ar_burst  ),
+      .ARLOCK_i  ( master[ariane_soc::CLIC].ar_lock   ),
+      .ARCACHE_i ( master[ariane_soc::CLIC].ar_cache  ),
+      .ARPROT_i  ( master[ariane_soc::CLIC].ar_prot   ),
+      .ARREGION_i( master[ariane_soc::CLIC].ar_region ),
+      .ARUSER_i  ( master[ariane_soc::CLIC].ar_user   ),
+      .ARQOS_i   ( master[ariane_soc::CLIC].ar_qos    ),
+      .ARVALID_i ( master[ariane_soc::CLIC].ar_valid  ),
+      .ARREADY_o ( master[ariane_soc::CLIC].ar_ready  ),
+      .RID_o     ( master[ariane_soc::CLIC].r_id      ),
+      .RDATA_o   ( master[ariane_soc::CLIC].r_data    ),
+      .RRESP_o   ( master[ariane_soc::CLIC].r_resp    ),
+      .RLAST_o   ( master[ariane_soc::CLIC].r_last    ),
+      .RUSER_o   ( master[ariane_soc::CLIC].r_user    ),
+      .RVALID_o  ( master[ariane_soc::CLIC].r_valid   ),
+      .RREADY_i  ( master[ariane_soc::CLIC].r_ready   ),
+      .PENABLE   ( clic_penable   ),
+      .PWRITE    ( clic_pwrite    ),
+      .PADDR     ( clic_paddr     ),
+      .PSEL      ( clic_psel      ),
+      .PWDATA    ( clic_pwdata    ),
+      .PRDATA    ( clic_prdata    ),
+      .PREADY    ( clic_pready    ),
+      .PSLVERR   ( clic_pslverr   )
+  );
+
+  // apb2reg interface
+
+  REG_BUS #(
+      .ADDR_WIDTH ( 32 ),
+      .DATA_WIDTH ( 32 )
+  ) reg_bus (clk_i);
+
+  apb_to_reg i_apb_to_reg (
+      .clk_i     ( clk_i        ),
+      .rst_ni    ( rst_ni       ),
+      .penable_i ( plic_penable ),
+      .pwrite_i  ( plic_pwrite  ),
+      .paddr_i   ( plic_paddr   ),
+      .psel_i    ( plic_psel    ),
+      .pwdata_i  ( plic_pwdata  ),
+      .prdata_o  ( plic_prdata  ),
+      .pready_o  ( plic_pready  ),
+      .pslverr_o ( plic_pslverr ),
+      .reg_o     ( reg_bus      )
+  );
+
+  // wrap register interface as req/resp for clic
+  localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
+  localparam int unsigned REG_BUS_DATA_WIDTH = 32;
+
+`define REG_BUS_TYPEDEF_REQ(req_t, addr_t, data_t, strb_t) \
+    typedef struct packed { \
+        addr_t addr; \
+        logic  write; \
+        data_t wdata; \
+        strb_t wstrb; \
+        logic  valid; \
+    } req_t;
+
+`define REG_BUS_TYPEDEF_RSP(rsp_t, data_t) \
+    typedef struct packed { \
+        data_t rdata; \
+        logic  error; \
+        logic  ready; \
+    } rsp_t;
+
+  typedef logic [REG_BUS_ADDR_WIDTH-1:0] addr_t;
+  typedef logic [REG_BUS_DATA_WIDTH-1:0] data_t;
+  typedef logic [REG_BUS_DATA_WIDTH/8-1:0] strb_t;
+
+  `REG_BUS_TYPEDEF_REQ(reg_a32_d32_req_t, addr_t, data_t, strb_t)
+  `REG_BUS_TYPEDEF_RSP(reg_a32_d32_rsp_t, data_t)
+
+  reg_a32_d32_req_t clic_req;
+  reg_a32_d32_rsp_t clic_rsp;
+
+  assign clic_req.addr  = reg_bus.addr;
+  assign clic_req.write = reg_bus.write;
+  assign clic_req.wdata = reg_bus.wdata;
+  assign clic_req.wstrb = reg_bus.wstrb;
+  assign clic_req.valid = reg_bus.valid;
+
+  assign reg_bus.rdata = clic_rsp.rdata;
+  assign reg_bus.error = clic_rsp.error;
+  assign reg_bus.ready = clic_rsp.ready;
+
+  // clic
   clic #(
     .N_SOURCE  (ariane_soc::NumInterruptSrc),
     .INTCTLBITS(ariane_soc::CLICIntCtlBits),
-    .reg_req_t (reg_a48_d32_req_t),
-    .reg_rsp_t (reg_a48_d32_rsp_t)
+    .reg_req_t (reg_a32_d32_req_t),
+    .reg_rsp_t (reg_a32_d32_rsp_t)
   ) i_clic (
     .clk_i,
     .rst_ni,
     // Bus Interface
-    .reg_req_i(soc_regbus_periph_xbar_out_req[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC]),
-    .reg_rsp_o(soc_regbus_periph_xbar_out_rsp[SOC_REGBUS_PERIPH_XBAR_OUT_CLIC]),
+    .reg_req_i(clic_req),
+    .reg_rsp_o(clic_rsp),
     // Interrupt Sources
     .intr_src_i (clic_irqs),
     // Interrupt notification to core
@@ -562,8 +700,6 @@ if (CLIC) begin : clic_plic
   // The cleaner way would be to integrate mtime/mtimecmp registers in the
   // clic, or remove the memory mapped registers for msip from the clint when
   // used in clic, because it is redundant.
-
-  logic mtip;
 
   always_ff @(posedge clk or negedge ndmreset_n) begin
     if (~ndmreset_n) begin
