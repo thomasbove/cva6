@@ -25,7 +25,7 @@ module ariane_testharness #(
   parameter int unsigned NUM_WORDS         = 2**25,         // memory size
   parameter bit          StallRandomOutput = 1'b0,
   parameter bit          StallRandomInput  = 1'b0,
-  parameter int unsigned CLIC              = 0
+  parameter int unsigned CLIC              = 1
 ) (
   input  logic                           clk_i,
   input  logic                           rtc_i,
