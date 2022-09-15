@@ -743,9 +743,13 @@ end else begin : clint_plic // legacy clint + plic, ariane not in CLIC mode
       .rst_ni       ( ndmreset_n          ),
       .boot_addr_i  ( ariane_soc::ROMBase ), // start fetching from ROM
       .hart_id_i    ( '0                  ),
-      .irq_i        ( irq                 ),
-      .ipi_i        ( ipi                 ),
-      .time_irq_i   ( timer_irq           ),
+
+      // Interrupt interface to core
+      .irq_i        ( '0                  ),
+      .irq_level_i  ( '0                  ),
+      .irq_shv_i    ( '0                  ),
+      .irq_ack_o    (                     ),
+
       .debug_req_i  ( debug_req_irq       ),
       .axi_req_o    ( axi_ariane_req      ),
       .axi_resp_i   ( axi_ariane_resp     )
