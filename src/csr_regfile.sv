@@ -233,7 +233,7 @@ module csr_regfile import ariane_pkg::*; #(
                     // In CLIC mode, reading or writing mstatus fields spp/spie in mcause is
                     // equivalent to reading or writing the homonymous field in mstatus.
                     if (clic_mode_o) begin
-                        csr_rdata[29:27] = {1'b0, sstatus_q.spp, sstatus_q.spie};
+                        csr_rdata[29:27] = {1'b0, mstatus_q.spp, mstatus_q.spie};
                     end
                 end
                 riscv::CSR_STVAL:              csr_rdata = stval_q;
