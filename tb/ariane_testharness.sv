@@ -852,7 +852,7 @@ if (CLIC) begin : clic_plic
     .rst_ni,
     // Bus Interface
     .reg_req_i(clic_req),
-    .reg_rsp_o(clic_resp),
+    .reg_rsp_o(clic_rsp),
     // Interrupt Sources
     .intr_src_i (clic_irqs),
     // Interrupt notification to core
