@@ -575,7 +575,7 @@ module ariane_testharness #(
       ariane_soc::EthernetBase,
       ariane_soc::GPIOBase,
       ariane_soc::DRAMBase,
-      ariane_soc::CLIC
+      ariane_soc::CLICBase
     })),
     .end_addr_i   (addr_map_t'({
       ariane_soc::DebugBase    + ariane_soc::DebugLength - 1,

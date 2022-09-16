@@ -313,7 +313,6 @@ axi_node_wrap_with_slices #(
         ariane_soc::EthernetBase + ariane_soc::EthernetLength -1,
         ariane_soc::GPIOBase     + ariane_soc::GPIOLength - 1,
         ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1,
-        ariane_soc::DRAMBase     + ariane_soc::DRAMLength - 1,
         ariane_soc::CLICBase     + ariane_soc::CLICLength - 1
     }),
     .valid_rule_i (ariane_soc::ValidRule)
