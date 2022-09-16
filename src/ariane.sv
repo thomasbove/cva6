@@ -37,7 +37,7 @@ module ariane import ariane_pkg::*; #(
   input  logic [ariane_soc::NumInterruptSrc-1:0] irq_i,       // interrupt source, onehot encoded (req + id information)
   input  logic [7:0]                                 irq_level_i, // interrupt level is 8-bit from CLIC spec
   input  logic                                       irq_shv_i,   // selective hardware vectoring bit
-  input  logic                                       irq_ack_o,   // core side interrupt hanshake (ready)
+  output logic                                       irq_ack_o,   // core side interrupt hanshake (ready)
   input  logic                         debug_req_i,  // debug request (async)
 `ifdef FIRESIM_TRACE
   // firesim trace port
