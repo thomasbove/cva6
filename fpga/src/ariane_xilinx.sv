@@ -588,14 +588,14 @@ if (CLIC) begin : clic_plic
   apb_to_reg i_apb_to_reg (
       .clk_i     ( clk_i        ),
       .rst_ni    ( rst_ni       ),
-      .penable_i ( plic_penable ),
-      .pwrite_i  ( plic_pwrite  ),
-      .paddr_i   ( plic_paddr   ),
-      .psel_i    ( plic_psel    ),
-      .pwdata_i  ( plic_pwdata  ),
-      .prdata_o  ( plic_prdata  ),
-      .pready_o  ( plic_pready  ),
-      .pslverr_o ( plic_pslverr ),
+      .penable_i ( clic_penable ),
+      .pwrite_i  ( clic_pwrite  ),
+      .paddr_i   ( clic_paddr   ),
+      .psel_i    ( clic_psel    ),
+      .pwdata_i  ( clic_pwdata  ),
+      .prdata_o  ( clic_prdata  ),
+      .pready_o  ( clic_pready  ),
+      .pslverr_o ( clic_pslverr ),
       .reg_o     ( reg_bus      )
   );
 
