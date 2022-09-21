@@ -898,6 +898,8 @@ module csr_regfile import ariane_pkg::*; #(
             mstatus_d.mpp  = riscv::PRIV_LVL_U;
             // set mpie to 1
             mstatus_d.mpie = 1'b1;
+            // restore mintstatus
+            mintstatus_d.mil = mcause_q[23:16];
         end
 
         if (sret) begin
