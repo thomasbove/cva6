@@ -775,8 +775,10 @@ module csr_regfile import ariane_pkg::*; #(
                 mstatus_d.mpp  = priv_lvl_q;
                 mcause_d       = ex_i.cause;
                 // update the current and previous interrupt level
-                mintstatus_d.mil = ex_i.cause[23:16];
-                mcause_d[23:16]  = mintstatus_q.mil;
+                if (clic_mode_o) begin
+                    mintstatus_d.mil = ex_i.cause[23:16];
+                    mcause_d[23:16]  = mintstatus_q.mil;
+                end
                 // set epc
                 mepc_d         = {{riscv::XLEN-riscv::VLEN{pc_i[riscv::VLEN-1]}},pc_i};
                 // set mtval or stval
@@ -901,7 +903,7 @@ module csr_regfile import ariane_pkg::*; #(
             // set mpie to 1
             mstatus_d.mpie = 1'b1;
             // restore mintstatus
-            mintstatus_d.mil = mcause_q[23:16];
+            if (clic_mode_o) mintstatus_d.mil = mcause_q[23:16];
         end
 
         if (sret) begin
