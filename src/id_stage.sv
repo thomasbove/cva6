@@ -97,7 +97,7 @@ module id_stage import ariane_soc::*; (
     // mintthresh, because interrupts with higher level have priority.
     logic [7:0] max_thresh;
     assign max_thresh = mintthresh_i > mintstatus_i.mil ? mintthresh_i : mintstatus_i.mil;
-    assign irq_req_ctrl = (irq_level > max_thresh) && (|irq_q) && irq_ctrl_i.mie;
+    assign irq_req_ctrl = (irq_level > max_thresh) && (|irq_q);
     assign irq_level_ctrl = irq_level;
 
     // ---------------------------------------------------------

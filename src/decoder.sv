@@ -1156,7 +1156,7 @@ module decoder import ariane_pkg::*; (
                 end
             end
 
-            if (interrupt_cause[riscv::XLEN-1] && irq_ctrl_i.global_enable) begin
+            if (interrupt_cause[riscv::XLEN-1] && (irq_ctrl_i.global_enable || clic_mode_i)) begin
                 // However, if bit i in mideleg is set, interrupts are considered to be globally enabled if the hart’s current privilege
                 // mode equals the delegated privilege mode (S or U) and that mode’s interrupt enable bit
                 // (SIE or UIE in mstatus) is set, or if the current privilege mode is less than the delegated privilege mode.
