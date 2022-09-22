@@ -520,8 +520,8 @@ if (CLIC) begin : clic_plic
       .BUFF_DEPTH_SLAVE   ( 2             ),
       .APB_ADDR_WIDTH     ( 32            )
   ) i_axi2apb_64_32_plic (
-      .ACLK      ( clk_i          ),
-      .ARESETn   ( rst_ni         ),
+      .ACLK      ( clk            ),
+      .ARESETn   ( ndmreset_n     ),
       .test_en_i ( 1'b0           ),
       .AWID_i    ( master[ariane_soc::CLIC].aw_id     ),
       .AWADDR_i  ( master[ariane_soc::CLIC].aw_addr   ),
@@ -585,8 +585,8 @@ if (CLIC) begin : clic_plic
   ) reg_bus (clk_i);
 
   apb_to_reg i_apb_to_reg (
-      .clk_i     ( clk_i        ),
-      .rst_ni    ( rst_ni       ),
+      .clk_i     ( clk          ),
+      .rst_ni    ( ndmreset_n   ),
       .penable_i ( clic_penable ),
       .pwrite_i  ( clic_pwrite  ),
       .paddr_i   ( clic_paddr   ),
@@ -645,8 +645,8 @@ if (CLIC) begin : clic_plic
     .reg_req_t (reg_a32_d32_req_t),
     .reg_rsp_t (reg_a32_d32_rsp_t)
   ) i_clic (
-    .clk_i,
-    .rst_ni,
+    .clk_i(clk),
+    .rst_ni(ndmreset_n),
     // Bus Interface
     .reg_req_i(clic_req),
     .reg_rsp_o(clic_rsp),
