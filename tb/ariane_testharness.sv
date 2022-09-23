@@ -848,8 +848,8 @@ if (CLIC) begin : clic_plic
     .reg_req_t (reg_a32_d32_req_t),
     .reg_rsp_t (reg_a32_d32_rsp_t)
   ) i_clic (
-    .clk_i,
-    .rst_ni,
+    .clk_i(clk_i),
+    .rst_ni(ndmreset_n),
     // Bus Interface
     .reg_req_i(clic_req),
     .reg_rsp_o(clic_rsp),
