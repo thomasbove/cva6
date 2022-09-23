@@ -119,6 +119,7 @@ module id_stage import ariane_soc::*; (
         .irq_id_ctrl_i           ( irq_id_ctrl                     ),
         .irq_level_ctrl_i        ( irq_level_ctrl                  ),
         .irq_ack_o,
+        .irq_i                   ( '0                              ),
         .clic_mode_i,
         .pc_i                    ( fetch_entry_i.address           ),
         .is_compressed_i         ( is_compressed                   ),
