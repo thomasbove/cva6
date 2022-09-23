@@ -582,7 +582,7 @@ if (CLIC) begin : clic_plic
   REG_BUS #(
       .ADDR_WIDTH ( 32 ),
       .DATA_WIDTH ( 32 )
-  ) reg_bus (clk_i);
+  ) reg_bus (clk);
 
   apb_to_reg i_apb_to_reg (
       .clk_i     ( clk          ),
