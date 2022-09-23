@@ -1056,10 +1056,10 @@ module csr_regfile import ariane_pkg::*; #(
 
     // output assignments dependent on privilege mode
     always_comb begin : priv_output
-        trap_vector_base_o = (clic_mode_o && irq_shv_i) ? {mtvt_q[riscv::VLEN-1:8], 8'b0} : {mtvec_q[riscv::VLEN-1:2], 2'b0};
+        trap_vector_base_o = (clic_mode_o && irq_shv_i && ex_i.cause[riscv::XLEN-1]) ? {mtvt_q[riscv::VLEN-1:8], 8'b0} : {mtvec_q[riscv::VLEN-1:2], 2'b0};
         // output user mode stvec
         if (trap_to_priv_lvl == riscv::PRIV_LVL_S) begin
-            trap_vector_base_o = (clic_mode_o && irq_shv_i) ? {stvt_q[riscv::VLEN-1:8], 8'b0} : {stvec_q[riscv::VLEN-1:2], 2'b0};
+            trap_vector_base_o = (clic_mode_o && irq_shv_i && ex_i.cause[riscv::XLEN-1]) ? {stvt_q[riscv::VLEN-1:8], 8'b0} : {stvec_q[riscv::VLEN-1:2], 2'b0};
         end
 
         // if we are in debug mode jump to a specific address
