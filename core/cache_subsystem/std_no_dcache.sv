@@ -93,7 +93,7 @@ module std_nbdcache #(
         data_if.aw_addr = '0;
         data_if.aw_size = '0;
         data_if.aw_lock = '0;
-        data_if.aw_cache = '0;
+        data_if.aw_cache = axi_pkg::CACHE_MODIFIABLE;
         data_if.aw_prot = '0;
         data_if.aw_qos = '0;
         data_if.aw_region = '0;
