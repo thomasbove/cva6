@@ -89,9 +89,10 @@ module axi_shim #(
   assign axi_req_o.aw.prot   = 3'b0;
   assign axi_req_o.aw.region = 4'b0;
   assign axi_req_o.aw.lock   = wr_lock_i;
-  assign axi_req_o.aw.cache  = 4'b0;
+  assign axi_req_o.aw.cache  = axi_pkg::CACHE_MODIFIABLE;
   assign axi_req_o.aw.qos    = 4'b0;
   assign axi_req_o.aw.atop   = wr_atop_i;
+  assign axi_req_o.aw.user   = '0;
   // data
   assign axi_req_o.w.data    = wr_data_i[wr_cnt_q];
   assign axi_req_o.w.user    = wr_user_i[wr_cnt_q];
@@ -246,8 +247,9 @@ module axi_shim #(
   assign axi_req_o.ar.prot   = 3'b0;
   assign axi_req_o.ar.region = 4'b0;
   assign axi_req_o.ar.lock   = rd_lock_i;
-  assign axi_req_o.ar.cache  = 4'b0;
+  assign axi_req_o.ar.cache  = axi_pkg::CACHE_MODIFIABLE;
   assign axi_req_o.ar.qos    = 4'b0;
+  assign axi_req_o.ar.user   = '0;
 
   // make the read request
   assign axi_req_o.ar_valid  = rd_req_i;
