@@ -228,6 +228,8 @@ tbs := $(addprefix $(root-dir), $(tbs))
 
 # RISCV asm tests and benchmark setup (used for CI)
 # there is a definesd test-list with selected CI tests
+riscv-litmus-test-dir     := ../cva6-litmus/binaries/
+riscv-litmus-tests-list   := ci/riscv-litmus-tests.list
 riscv-test-dir            := tmp/riscv-tests/build/isa/
 riscv-benchmarks-dir      := tmp/riscv-tests/build/benchmarks/
 riscv-hyp-test            := tmp/riscv-hyp-tests/build/cva6/rvh_test.elf
@@ -237,6 +239,7 @@ riscv-mul-tests-list      := ci/riscv-mul-tests.list
 riscv-fp-tests-list       := ci/riscv-fp-tests.list
 riscv-clic-tests-list     := ci/riscv-clic-tests.list
 riscv-benchmarks-list     := ci/riscv-benchmarks.list
+riscv-litmus-tests        := $(shell xargs printf '\n%s' < $(riscv-litmus-tests-list)  | cut -b 1-)
 riscv-asm-tests           := $(shell xargs printf '\n%s' < $(riscv-asm-tests-list)  | cut -b 1-)
 riscv-amo-tests           := $(shell xargs printf '\n%s' < $(riscv-amo-tests-list)  | cut -b 1-)
 riscv-mul-tests           := $(shell xargs printf '\n%s' < $(riscv-mul-tests-list)  | cut -b 1-)
@@ -349,6 +352,14 @@ sim: build
 	+BASEDIR=$(riscv-test-dir) $(uvm-flags) $(QUESTASIM_FLAGS) -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi  \
 	${top_level}_optimized +permissive-off ++$(elf-bin) ++$(target-options) | tee sim.log
 
+$(riscv-litmus-tests): build
+	$(VSIM) +permissive $(questa-flags) $(questa-cmd) +PRELOAD=$(riscv-litmus-test-dir)/$@ ++$(target-options) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
+	+BASEDIR=$(riscv-litmus-test-dir) $(uvm-flags) +jtag_rbb_enable=0  -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi        \
+	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++none | tee tmp/riscv-litmus-tests-$@.log
+
+find-litmus:
+	basename -a `find $(riscv-litmus-test-dir) -name "*.elf" | sed 's/\[/\\\[/g'` > $(riscv-litmus-tests-list)
+
 $(riscv-asm-tests): build
 	$(VSIM) +permissive $(questa-flags) $(questa-cmd) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
 	+BASEDIR=$(riscv-test-dir) $(uvm-flags) +jtag_rbb_enable=0  -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi        \
@@ -385,6 +396,8 @@ $(riscv-benchmarks): build
 	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++$(riscv-benchmarks-dir)/$@ ++$(target-options) | tee tmp/riscv-benchmarks-$@.log
 
 # can use -jX to run ci tests in parallel using X processes
+run-litmus-tests: $(riscv-litmus-tests)
+
 run-asm-tests: $(riscv-asm-tests)
 	$(MAKE) check-asm-tests
 
@@ -736,6 +749,7 @@ build-spike:
 	cd tb/riscv-isa-sim && mkdir -p build && cd build && ../configure --prefix=`pwd`/../install --with-fesvr=$(RISCV) --enable-commitlog && make -j8 install
 
 clean:
+	rm -rf log/*
 	rm -rf $(riscv-torture-dir)/output/test*
 	rm -rf $(library)/ $(dpi-library)/ $(ver-library)/ $(vcs-library)/
 	rm -f tmp/*.ucdb tmp/*.log *.wlf *vstf wlft* *.ucdb

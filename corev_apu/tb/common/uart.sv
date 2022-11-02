@@ -13,6 +13,10 @@
 // Description: This module takes data over UART and prints them to the console
 //              A string is printed to the console as soon as a '\n' character is found
 
+import uvm_pkg::*;
+
+`include "uvm_macros.svh"
+
 interface uart_bus #(
     parameter int unsigned BAUD_RATE = 115200,
     parameter int unsigned PARITY_EN = 0
@@ -32,9 +36,23 @@ interface uart_bus #(
   integer           charnum;
   integer           file;
 
+  string binary = "";
+  string litmus;
+  string litmus_file;
+  static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
+
   initial begin
     tx   = 1'bZ;
-    file = $fopen("uart", "w");
+    void'(uvcl.get_arg_value("+PRELOAD=", binary));
+    if (binary != "") begin
+      litmus = litmus_name();
+      litmus_file = {"./log/",litmus,".log"};
+      file = $fopen(litmus_file,"w");
+      $fwrite(file, "Test %s Allowed\n",litmus);
+      $fwrite(file, "Histogram\n");
+    end else begin
+      file = $fopen("uart", "w");
+    end 
   end
 
   always begin
@@ -71,6 +89,12 @@ interface uart_bus #(
         end
 
         $write("[UART]: %s\n", stringa);
+
+        if (stringa[(255-charnum+1)*8 +: 8*4] == "Time") begin
+          $display("[UART] Finish test");
+          #1000
+          $finish;
+        end
         charnum = 0;
         stringa = "";
       end else begin
@@ -100,5 +124,14 @@ interface uart_bus #(
     #(BIT_PERIOD);
   endtask
 `endif
+
+  function string litmus_name(); 
+
+    for (int i = binary.len()-1; i > -1; i--) begin
+      if(binary[i] == "/") begin
+        return binary.substr(i+1,binary.len()-5);
+      end
+    end
+  endfunction : litmus_name
 /* pragma translate_on */
 endinterface

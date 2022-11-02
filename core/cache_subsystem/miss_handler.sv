@@ -154,7 +154,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         automatic logic [DCACHE_SET_ASSOC-1:0] evict_way, valid_way;
 
         for (int unsigned i = 0; i < DCACHE_SET_ASSOC; i++) begin
-            evict_way[i] = data_i[i].valid & data_i[i].dirty;
+            evict_way[i] = data_i[i].valid & (|data_i[i].dirty);
             valid_way[i] = data_i[i].valid;
         end
         // ----------------------
@@ -214,15 +214,9 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
                 // lowest priority are AMOs, wait until everything else is served before going for the AMOs
                 if (amo_req_i.req && !busy_i) begin
                     // 1. Flush the cache
-                    if (!serve_amo_q) begin
-                        state_d = FLUSH_REQ_STATUS;
-                        serve_amo_d = 1'b1;
-                        cnt_d = '0;
-                    // 2. Do the AMO
-                    end else begin
-                        state_d = AMO_REQ;
-                        serve_amo_d = 1'b0;
-                    end
+                    state_d = FLUSH_REQ_STATUS;
+                    serve_amo_d = 1'b1;
+                    cnt_d = '0;
                 end
                 // check if we want to flush and can flush e.g.: we are not busy anymore
                 // TODO: Check that the busy flag is indeed needed
@@ -267,10 +261,11 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
                     lfsr_enable = 1'b1;
                     evict_way_d = lfsr_oh;
                     // do we need to write back the cache line?
-                    if (data_i[lfsr_bin].dirty) begin
+                    if (|data_i[lfsr_bin].dirty) begin
                         state_d = WB_CACHELINE_MISS;
                         evict_cl_d.tag = data_i[lfsr_bin].tag;
                         evict_cl_d.data = data_i[lfsr_bin].data;
+                        evict_cl_d.dirty = data_i[lfsr_bin].dirty;
                         cnt_d = mshr_q.addr[DCACHE_INDEX_WIDTH-1:0];
                     // no - we can request a cache line now
                     end else
@@ -310,7 +305,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
                     data_o.tag   = mshr_q.addr[DCACHE_TAG_WIDTH+DCACHE_INDEX_WIDTH-1:DCACHE_INDEX_WIDTH];
                     data_o.data  = data_miss_fsm;
                     data_o.valid = 1'b1;
-                    data_o.dirty = 1'b0;
+                    data_o.dirty = '0;
 
                     // is this a write?
                     if (mshr_q.we) begin
@@ -321,7 +316,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
                                 data_o.data[(cl_offset + i*8) +: 8] = mshr_q.wdata[i];
                         end
                         // its immediately dirty if we write
-                        data_o.dirty = 1'b1;
+                        data_o.dirty[cl_offset>>3 +: 8] = mshr_q.be;
                     end
                     // reset MSHR
                     mshr_d.valid = 1'b0;
@@ -338,7 +333,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
 
                 req_fsm_miss_valid  = 1'b1;
                 req_fsm_miss_addr   = {evict_cl_q.tag, cnt_q[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET], {{DCACHE_BYTE_OFFSET}{1'b0}}};
-                req_fsm_miss_be     = '1;
+                req_fsm_miss_be     = evict_cl_q.dirty;
                 req_fsm_miss_we     = 1'b1;
                 req_fsm_miss_wdata  = evict_cl_q.data;
 
@@ -387,7 +382,13 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
                     if (cnt_q[DCACHE_INDEX_WIDTH-1:DCACHE_BYTE_OFFSET] == DCACHE_NUM_WORDS-1) begin
                         // only acknowledge if the flush wasn't triggered by an atomic
                         flush_ack_o = ~serve_amo_q;
-                        state_d     = IDLE;
+                        //if we are servicing flushing because of an AMO go to serve it
+                        if (serve_amo_q) begin
+                           state_d = AMO_REQ;
+                            serve_amo_d = 1'b0;
+                        end else begin
+                            state_d     = IDLE;
+                        end
                     end
                 end
             end
