@@ -12,7 +12,7 @@ dependencies:
   axi: { git: "git@github.com:pulp-platform/axi.git", version: 0.37.0 }
   axi_riscv_atomics: { git: "git@github.com:pulp-platform/axi_riscv_atomics.git", version: 0.5.0 }
   tech_cells_generic: { git: "git@github.com:pulp-platform/tech_cells_generic.git", version: 0.2.9 }
-  riscv-dbg: { path: ./future/riscv-dbg }
+  riscv-dbg: { git: "git@github.com:pulp-platform/riscv-dbg", version: 0.7.0 }
   common_cells: { git: "git@github.com:pulp-platform/common_cells", version: 1.25.0 }
 
 sources:
