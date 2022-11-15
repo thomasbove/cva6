@@ -636,6 +636,10 @@ module ariane_testharness #(
     .acc_resp_i           ( '0                  ),
     .acc_resp_valid_i     ( 1'b0                ),
     .acc_resp_ready_o     ( /* Unused */        ),
+    .acc_cons_en_o        ( /* Unused */        ),
+    .inval_addr_i         ( '0                  ),
+    .inval_valid_i        ( '0                  ),
+    .inval_ready_o        ( /* Unused */        ),
 // Disable Debug when simulating with Spike
 `ifdef SPIKE_TANDEM
     .debug_req_i          ( 1'b0                ),

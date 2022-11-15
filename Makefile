@@ -29,7 +29,7 @@ verilator      ?= verilator
 # traget option
 target-options ?=
 # additional definess
-defines        ?= WT_DCACHE+RVFI_TRACE
+defines        ?= WT_DCACHE
 # test name for torture runs (binary name)
 test-location  ?= output/test
 # set to either nothing or -log
@@ -88,6 +88,7 @@ target     ?= cv64a6_imafdc_sv39
 ariane_pkg := core/include/$(target)_config_pkg.sv
 ariane_pkg += core/include/riscv_pkg.sv                              \
               corev_apu/riscv-dbg/src/dm_pkg.sv                      \
+              core/fpu/src/fpnew_pkg.sv                              \
               core/include/ariane_pkg.sv                             \
               core/include/ariane_rvfi_pkg.sv                        \
               core/include/wt_cache_pkg.sv                           \
@@ -100,7 +101,6 @@ ariane_pkg += core/include/riscv_pkg.sv                              \
               corev_apu/tb/ariane_axi_soc_pkg.sv                     \
               core/include/ariane_axi_pkg.sv                         \
               core/include/std_cache_pkg.sv                          \
-              core/fpu/src/fpnew_pkg.sv                              \
               common/submodules/common_cells/src/cf_math_pkg.sv      \
               core/cvxif_example/include/cvxif_instr_pkg.sv          \
               core/fpu/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
