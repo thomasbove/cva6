@@ -209,7 +209,7 @@ sources:
       files:
       - corev_apu/tb/ariane_soc_pkg.sv
       - corev_apu/tb/ariane_axi_soc_pkg.sv
-      - corev_apu/tb/ariane_testharness.sv
+      # - corev_apu/tb/ariane_testharness.sv
       - corev_apu/tb/ariane_peripherals.sv
       - corev_apu/tb/common/uart.sv
       - corev_apu/tb/common/SimDTM.sv
