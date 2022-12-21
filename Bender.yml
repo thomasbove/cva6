@@ -207,10 +207,10 @@ sources:
       - core/include/cv32a6_imac_sv0_config_pkg.sv
     - target: cva6_test
       files:
-      - corev_apu/tb/ariane_soc_pkg.sv
-      - corev_apu/tb/ariane_axi_soc_pkg.sv
+      # - corev_apu/tb/ariane_soc_pkg.sv
+      # - corev_apu/tb/ariane_axi_soc_pkg.sv
       # - corev_apu/tb/ariane_testharness.sv
-      - corev_apu/tb/ariane_peripherals.sv
+      # - corev_apu/tb/ariane_peripherals.sv
       - corev_apu/tb/common/uart.sv
       - corev_apu/tb/common/SimDTM.sv
       - corev_apu/tb/common/SimJTAG.sv
