@@ -8,7 +8,7 @@ package:
 # WT_DCACHE
 
 export_include_dirs:
-  - common/submodules/common_cells/include/
+  # - common/submodules/common_cells/include/
   - common/local/util/
   - corev_apu/axi/include/
   - corev_apu/register_interface/include/
@@ -33,8 +33,8 @@ sources:
     - vendor/pulp-platform/fpnew/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
     - core/include/cvxif_pkg.sv
     - core/cvxif_example/include/cvxif_instr_pkg.sv
-    - core/include/ariane_rvfi_pkg.sv
-    - core/include/instr_tracer_pkg.sv
+    # - core/include/ariane_rvfi_pkg.sv
+    # - core/include/instr_tracer_pkg.sv
     # Stand-alone source files
     - core/cva6.sv
     - core/ariane.sv
@@ -155,15 +155,15 @@ sources:
     - corev_apu/riscv-dbg/debug_rom/debug_rom.sv
     - corev_apu/register_interface/src/apb_to_reg.sv
     - corev_apu/axi/src/axi_multicut.sv
-    - common/submodules/common_cells/src/deprecated/generic_fifo.sv
-    - common/submodules/common_cells/src/deprecated/pulp_sync.sv
-    - common/submodules/common_cells/src/deprecated/find_first_one.sv
-    - common/submodules/common_cells/src/rstgen_bypass.sv
-    - common/submodules/common_cells/src/rstgen.sv
-    - common/submodules/common_cells/src/stream_mux.sv
-    - common/submodules/common_cells/src/stream_demux.sv
-    - common/submodules/common_cells/src/stream_arbiter.sv
-    - common/submodules/common_cells/src/stream_arbiter_flushable.sv
+    # - common/submodules/common_cells/src/deprecated/generic_fifo.sv
+    # - common/submodules/common_cells/src/deprecated/pulp_sync.sv
+    # - common/submodules/common_cells/src/deprecated/find_first_one.sv
+    # - common/submodules/common_cells/src/rstgen_bypass.sv
+    # - common/submodules/common_cells/src/rstgen.sv
+    # - common/submodules/common_cells/src/stream_mux.sv
+    # - common/submodules/common_cells/src/stream_demux.sv
+    # - common/submodules/common_cells/src/stream_arbiter.sv
+    # - common/submodules/common_cells/src/stream_arbiter_flushable.sv
     - corev_apu/axi/src/axi_cut.sv
     - corev_apu/axi/src/axi_join.sv
     - corev_apu/axi/src/axi_delayer.sv
@@ -175,85 +175,85 @@ sources:
     - corev_apu/axi/src/axi_demux.sv
     - corev_apu/axi/src/axi_xbar.sv
     - common/local/techlib/fpga/rtl/SyncSpRamBeNx64.sv
-    - common/submodules/common_cells/src/sync.sv
-    - common/submodules/common_cells/src/popcount.sv
-    - common/submodules/common_cells/src/unread.sv
-    - common/submodules/common_cells/src/cdc_2phase.sv
-    - common/submodules/common_cells/src/spill_register_flushable.sv
-    - common/submodules/common_cells/src/spill_register.sv
-    - common/submodules/common_cells/src/edge_detect.sv
-    - common/submodules/common_cells/src/fifo_v3.sv
-    - common/submodules/common_cells/src/deprecated/fifo_v2.sv
-    - common/submodules/common_cells/src/deprecated/fifo_v1.sv
-    - common/submodules/common_cells/src/lzc.sv
-    - common/submodules/common_cells/src/rr_arb_tree.sv
-    - common/submodules/common_cells/src/deprecated/rrarbiter.sv
-    - common/submodules/common_cells/src/stream_delay.sv
-    - common/submodules/common_cells/src/lfsr.sv
-    - common/submodules/common_cells/src/lfsr_8bit.sv
-    - common/submodules/common_cells/src/lfsr_16bit.sv
-    - common/submodules/common_cells/src/counter.sv
-    - common/submodules/common_cells/src/shift_reg.sv
-    - common/submodules/common_cells/src/exp_backoff.sv
-    - common/submodules/common_cells/src/addr_decode.sv
-    - common/submodules/common_cells/src/stream_register.sv
+    # - common/submodules/common_cells/src/sync.sv
+    # - common/submodules/common_cells/src/popcount.sv
+    # - common/submodules/common_cells/src/unread.sv
+    # - common/submodules/common_cells/src/cdc_2phase.sv
+    # - common/submodules/common_cells/src/spill_register_flushable.sv
+    # - common/submodules/common_cells/src/spill_register.sv
+    # - common/submodules/common_cells/src/edge_detect.sv
+    # - common/submodules/common_cells/src/fifo_v3.sv
+    # - common/submodules/common_cells/src/deprecated/fifo_v2.sv
+    # - common/submodules/common_cells/src/deprecated/fifo_v1.sv
+    # - common/submodules/common_cells/src/lzc.sv
+    # - common/submodules/common_cells/src/rr_arb_tree.sv
+    # - common/submodules/common_cells/src/deprecated/rrarbiter.sv
+    # - common/submodules/common_cells/src/stream_delay.sv
+    # - common/submodules/common_cells/src/lfsr.sv
+    # - common/submodules/common_cells/src/lfsr_8bit.sv
+    # - common/submodules/common_cells/src/lfsr_16bit.sv
+    # - common/submodules/common_cells/src/counter.sv
+    # - common/submodules/common_cells/src/shift_reg.sv
+    # - common/submodules/common_cells/src/exp_backoff.sv
+    # - common/submodules/common_cells/src/addr_decode.sv
+    # - common/submodules/common_cells/src/stream_register.sv
     # - corev_apu/src/tech_cells_generic/src/cluster_clock_inverter.sv
     # - corev_apu/src/tech_cells_generic/src/pulp_clock_mux2.sv
-    - target: not(cv32a6)
-      files:
-      - core/include/cv64a6_imafdc_sv39_config_pkg.sv
-    - target: cv32a6
-      files:
-      - core/include/cv32a6_imac_sv0_config_pkg.sv
+    # - target: not(cv32a6)
+    #   files:
+    # - core/include/cv64a6_imafdc_sv39_config_pkg.sv
+    # - target: cv32a6
+    #   files:
+    #   - core/include/cv32a6_imac_sv0_config_pkg.sv
     - target: cva6_test
       files:
-      - corev_apu/tb/ariane_soc_pkg.sv
-      - corev_apu/tb/ariane_axi_soc_pkg.sv
-      - corev_apu/tb/ariane_testharness.sv
-      - corev_apu/tb/ariane_peripherals.sv
-      - corev_apu/tb/common/uart.sv
-      - corev_apu/tb/common/SimDTM.sv
-      - corev_apu/tb/common/SimJTAG.sv
+      # - corev_apu/tb/ariane_soc_pkg.sv
+      # - corev_apu/tb/ariane_axi_soc_pkg.sv
+      # - corev_apu/tb/ariane_testharness.sv
+      # - corev_apu/tb/ariane_peripherals.sv
+      # - corev_apu/tb/common/uart.sv
+      # - corev_apu/tb/common/SimDTM.sv
+      # - corev_apu/tb/common/SimJTAG.sv
       - corev_apu/bootrom/bootrom.sv
       - corev_apu/tb/common/mock_uart.sv
       - common/local/util/sram.sv
-    - target: not(synthesis)
-      files:
-        - common/local/util/instr_tracer.sv
-        - common/local/util/instr_tracer_if.sv
-        - common/local/util/instr_trace_item.svh
-        - common/local/util/ex_trace_item.svh
-    - target: all(fpga, xilinx)
-      files:
-      - corev_apu/fpga/src/ariane_peripherals_xilinx.sv
-      - corev_apu/fpga/src/ariane_xilinx.sv
-      - corev_apu/fpga/src/fan_ctrl.sv
-      - corev_apu/fpga/src/bootrom/bootrom.sv
-      - corev_apu/fpga/src/ariane-ethernet/ssio_ddr_in.sv
-      - corev_apu/fpga/src/ariane-ethernet/rgmii_soc.sv
-      - corev_apu/fpga/src/ariane-ethernet/axis_gmii_rx.sv
-      - corev_apu/fpga/src/ariane-ethernet/oddr.sv
-      - corev_apu/fpga/src/ariane-ethernet/axis_gmii_tx.sv
-      - corev_apu/fpga/src/ariane-ethernet/dualmem_widen8.sv
-      - corev_apu/fpga/src/ariane-ethernet/rgmii_phy_if.sv
-      - corev_apu/fpga/src/ariane-ethernet/dualmem_widen.sv
-      - corev_apu/fpga/src/ariane-ethernet/rgmii_lfsr.sv
-      - corev_apu/fpga/src/ariane-ethernet/rgmii_core.sv
-      - corev_apu/fpga/src/ariane-ethernet/eth_mac_1g.sv
-      - corev_apu/fpga/src/ariane-ethernet/eth_mac_1g_rgmii.sv
-      - corev_apu/fpga/src/ariane-ethernet/eth_mac_1g_rgmii_fifo.sv
-      - corev_apu/fpga/src/ariane-ethernet/iddr.sv
-      - corev_apu/fpga/src/ariane-ethernet/framing_top.sv
-      - corev_apu/fpga/src/apb_uart/src/apb_uart.vhd
-      - corev_apu/fpga/src/apb_uart/src/uart_transmitter.vhd
-      - corev_apu/fpga/src/apb_uart/src/uart_interrupt.vhd
-      - corev_apu/fpga/src/apb_uart/src/slib_mv_filter.vhd
-      - corev_apu/fpga/src/apb_uart/src/slib_input_filter.vhd
-      - corev_apu/fpga/src/apb_uart/src/slib_counter.vhd
-      - corev_apu/fpga/src/apb_uart/src/uart_receiver.vhd
-      - corev_apu/fpga/src/apb_uart/src/slib_input_sync.vhd
-      - corev_apu/fpga/src/apb_uart/src/slib_edge_detect.vhd
-      - corev_apu/fpga/src/apb_uart/src/slib_clock_div.vhd
-      - corev_apu/fpga/src/apb_uart/src/slib_fifo.vhd
-      - corev_apu/fpga/src/apb_uart/src/uart_baudgen.vhd
+    # - target: not(synthesis)
+    #   files:
+        # - common/local/util/instr_tracer.sv
+        # - common/local/util/instr_tracer_if.sv
+        # - common/local/util/instr_trace_item.svh
+        # - common/local/util/ex_trace_item.svh
+    # - target: all(fpga, xilinx)
+    #   files:
+    #   - corev_apu/fpga/src/ariane_peripherals_xilinx.sv
+    #   - corev_apu/fpga/src/ariane_xilinx.sv
+    #   - corev_apu/fpga/src/fan_ctrl.sv
+    #   - corev_apu/fpga/src/bootrom/bootrom.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/ssio_ddr_in.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/rgmii_soc.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/axis_gmii_rx.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/oddr.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/axis_gmii_tx.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/dualmem_widen8.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/rgmii_phy_if.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/dualmem_widen.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/rgmii_lfsr.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/rgmii_core.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/eth_mac_1g.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/eth_mac_1g_rgmii.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/eth_mac_1g_rgmii_fifo.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/iddr.sv
+    #   - corev_apu/fpga/src/ariane-ethernet/framing_top.sv
+    #   - corev_apu/fpga/src/apb_uart/src/apb_uart.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/uart_transmitter.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/uart_interrupt.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/slib_mv_filter.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/slib_input_filter.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/slib_counter.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/uart_receiver.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/slib_input_sync.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/slib_edge_detect.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/slib_clock_div.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/slib_fifo.vhd
+    #   - corev_apu/fpga/src/apb_uart/src/uart_baudgen.vhd
 
