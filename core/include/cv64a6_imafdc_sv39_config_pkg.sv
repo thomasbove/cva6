@@ -21,6 +21,7 @@ package cva6_config_pkg;
     localparam CVA6ConfigCvxifEn = 1;
     localparam CVA6ConfigCExtEn = 1;
     localparam CVA6ConfigAExtEn = 1;
+    localparam CVA6ConfigVExtEn = 0;
 
     localparam CVA6ConfigFetchUserEn = 0;
     localparam CVA6ConfigFetchUserWidth = CVA6ConfigXlen;
@@ -30,7 +31,11 @@ package cva6_config_pkg;
     localparam CVA6ConfigRenameEn = 0;
 
     localparam CVA6ConfigIcacheSetAssoc = 4;
+    localparam CVA6ConfigIcacheSets = 1024;
+    localparam CVA6ConfigIcacheLineWidth = 128;
     localparam CVA6ConfigDcacheSetAssoc = 4;
+    localparam CVA6ConfigDcacheSets = 2048;
+    localparam CVA6ConfigDcacheLineWidth = 256;
 
     localparam CVA6ConfigNrCommitPorts = 2;
     localparam CVA6ConfigNrScoreboardEntries = 8;
