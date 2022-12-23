@@ -15,7 +15,7 @@
         // URL
         url: "https://github.com/pulp-platform/fpnew.git",
         // revision
-        rev: "v0.6.2",
+        rev: "vec",
     }
 
     // Patch dir for local changes
