@@ -21,7 +21,15 @@ sources:
       WT_DCACHE: 1
     files:
     # Packages
-    - core/include/cv64a6_imafdc_sv39_config_pkg.sv
+    - target: not(any(cv32a6,cv64a6v))
+      files:
+      - core/include/cv64a6_imafdc_sv39_config_pkg.sv
+    - target: cv64a6v
+      files:
+      - core/include/cv64a6_imafdcv_sv39_config_pkg.sv
+    - target: cv32a6
+      files:
+      - core/include/cv32a6_imac_sv0_config_pkg.sv
     - core/include/riscv_pkg.sv
     - corev_apu/riscv-dbg/src/dm_pkg.sv
     - core/include/ariane_dm_pkg.sv
@@ -153,12 +161,6 @@ sources:
     - corev_apu/riscv-dbg/debug_rom/debug_rom.sv
     - corev_apu/register_interface/src/apb_to_reg.sv
     - common/local/techlib/fpga/rtl/SyncSpRamBeNx64.sv
-    - target: not(any(cv32a6,cv64a6v))
-      files:
-      - core/include/cv64a6_imafdc_sv39_config_pkg.sv
-    - target: cv64a6v
-      files:
-      - core/include/cv64a6_imafdcv_sv39_config_pkg.sv
     - target: not(cv32a6)
       files:
       - core/mmu_sv39/tlb.sv
@@ -166,7 +168,6 @@ sources:
       - core/mmu_sv39/ptw.sv
     - target: cv32a6
       files:
-      - core/include/cv32a6_imac_sv0_config_pkg.sv
       - core/mmu_sv32/cva6_tlb_sv32.sv
       - core/mmu_sv32/cva6_mmu_sv32.sv
       - core/mmu_sv32/cva6_ptw_sv32.sv
