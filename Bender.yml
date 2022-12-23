@@ -21,6 +21,8 @@ sources:
     - core/include/cv64a6_imafdc_sv39_config_pkg.sv
     - core/include/riscv_pkg.sv
     - corev_apu/riscv-dbg/src/dm_pkg.sv
+    - core/include/ariane_dm_pkg.sv
+    - vendor/pulp-platform/fpnew/src/fpnew_pkg.sv
     - core/include/ariane_pkg.sv
     - core/include/wt_cache_pkg.sv
     - corev_apu/register_interface/src/reg_intf.sv
@@ -29,7 +31,6 @@ sources:
     - corev_apu/tb/ariane_axi_soc_pkg.sv
     - core/include/ariane_axi_pkg.sv
     - core/include/std_cache_pkg.sv
-    - vendor/pulp-platform/fpnew/src/fpnew_pkg.sv
     - vendor/pulp-platform/fpnew/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
     - core/include/cvxif_pkg.sv
     - core/cvxif_example/include/cvxif_instr_pkg.sv
@@ -58,7 +59,7 @@ sources:
     - core/scoreboard.sv
     - core/perf_counters.sv
     - core/store_unit.sv
-    - core/axi_adapter.sv
+    - corev_apu/tb/axi_adapter.sv
     - core/fpu_wrap.sv
     - core/csr_regfile.sv
     - core/commit_stage.sv
