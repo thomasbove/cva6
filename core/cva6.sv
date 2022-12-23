@@ -46,6 +46,7 @@ module cva6 import ariane_pkg::*; #(
   // Timer facilities
   input  logic                         time_irq_i,   // timer interrupt in (async)
   input  logic                         debug_req_i,  // debug request (async)
+`ifdef ARIANE_ACCELERATOR_PORT
   // Accelerator request port
   output accelerator_req_t             acc_req_o,
   output logic                         acc_req_valid_o,
@@ -59,6 +60,7 @@ module cva6 import ariane_pkg::*; #(
   input  logic [63:0]                  inval_addr_i,
   input  logic                         inval_valid_i,
   output logic                         inval_ready_o,
+`endif
 `ifdef FIRESIM_TRACE
   // firesim trace port
   output traced_instr_pkg::trace_port_t trace_o,
@@ -294,7 +296,36 @@ module cva6 import ariane_pkg::*; #(
   logic [(riscv::XLEN/8)-1:0]           lsu_wmask;
   logic [ariane_pkg::TRANS_ID_BITS-1:0] lsu_addr_trans_id;
 
-  assign acc_cons_en_o = acc_cons_en_csr;
+  // Accelerator port
+  accelerator_req_t  acc_req;
+  logic              acc_req_valid;
+  logic              acc_req_ready;
+  accelerator_resp_t acc_resp;
+  logic              acc_resp_valid;
+  logic              acc_resp_ready;
+  logic [63:0]       inval_addr;
+  logic              inval_valid;
+  logic              inval_ready;
+
+`ifdef ARIANE_ACCELERATOR_PORT
+  assign acc_req_o        = acc_req;
+  assign acc_req_valid_o  = acc_req_valid;
+  assign acc_req_ready    = acc_req_ready_i;
+  assign acc_resp         = acc_resp_i;
+  assign acc_resp_valid   = acc_resp_valid_i;
+  assign acc_resp_ready_o = acc_resp_ready;
+  assign inval_addr       = inval_addr_i;
+  assign inval_valid      = inval_valid_i;
+  assign inval_ready_o    = inval_ready;
+  assign acc_cons_en_o    = acc_cons_en_csr;
+`else
+  assign acc_req_ready    = '0;
+  assign acc_resp         = '0;
+  assign acc_resp_valid   = '0;
+  assign inval_addr       = '0;
+  assign inval_valid      = '0;
+`endif
+
 
   // --------------
   // Frontend
@@ -358,16 +389,26 @@ module cva6 import ariane_pkg::*; #(
   logic [NR_WB_PORTS-1:0]                    wt_valid_ex_id;
 
   if (CVXIF_PRESENT) begin
-    assign trans_id_ex_id = {x_trans_id_ex_id, flu_trans_id_ex_id, load_trans_id_ex_id, store_trans_id_ex_id, fpu_trans_id_ex_id, acc_trans_id_ex_id};
-    assign wbdata_ex_id   = {x_result_ex_id, flu_result_ex_id, load_result_ex_id, store_result_ex_id, fpu_result_ex_id, acc_result_ex_id};
-    assign ex_ex_ex_id    = {x_exception_ex_id, flu_exception_ex_id, load_exception_ex_id, store_exception_ex_id, fpu_exception_ex_id, acc_exception_ex_id};
-    assign wt_valid_ex_id = {x_valid_ex_id, flu_valid_ex_id, load_valid_ex_id, store_valid_ex_id, fpu_valid_ex_id, acc_valid_ex_id};
-  end else begin
+    assign trans_id_ex_id = {x_trans_id_ex_id, flu_trans_id_ex_id, load_trans_id_ex_id, store_trans_id_ex_id, fpu_trans_id_ex_id};
+    assign wbdata_ex_id   = {x_result_ex_id, flu_result_ex_id, load_result_ex_id, store_result_ex_id, fpu_result_ex_id};
+    assign ex_ex_ex_id    = {x_exception_ex_id, flu_exception_ex_id, load_exception_ex_id, store_exception_ex_id, fpu_exception_ex_id};
+    assign wt_valid_ex_id = {x_valid_ex_id, flu_valid_ex_id, load_valid_ex_id, store_valid_ex_id, fpu_valid_ex_id};
+  end else if (ENABLE_ACCELERATOR) begin
     assign trans_id_ex_id = {flu_trans_id_ex_id, load_trans_id_ex_id, store_trans_id_ex_id, fpu_trans_id_ex_id, acc_trans_id_ex_id};
     assign wbdata_ex_id   = {flu_result_ex_id, load_result_ex_id, store_result_ex_id, fpu_result_ex_id, acc_result_ex_id};
     assign ex_ex_ex_id    = {flu_exception_ex_id, load_exception_ex_id, store_exception_ex_id, fpu_exception_ex_id, acc_exception_ex_id};
     assign wt_valid_ex_id = {flu_valid_ex_id, load_valid_ex_id, store_valid_ex_id, fpu_valid_ex_id, acc_valid_ex_id};
+  end else begin
+    assign trans_id_ex_id = {flu_trans_id_ex_id, load_trans_id_ex_id, store_trans_id_ex_id, fpu_trans_id_ex_id};
+    assign wbdata_ex_id   = {flu_result_ex_id, load_result_ex_id, store_result_ex_id, fpu_result_ex_id};
+    assign ex_ex_ex_id    = {flu_exception_ex_id, load_exception_ex_id, store_exception_ex_id, fpu_exception_ex_id};
+    assign wt_valid_ex_id = {flu_valid_ex_id, load_valid_ex_id, store_valid_ex_id, fpu_valid_ex_id};
   end
+
+  if (CVXIF_PRESENT && ENABLE_ACCELERATOR) begin : gen_err_xif_and_acc
+    $error("X-interface and accelerator port cannot be enabled at the same time.");
+  end
+
   // ---------
   // Issue
   // ---------
@@ -422,8 +463,8 @@ module cva6 import ariane_pkg::*; #(
     .acc_ld_disp_i              ( acc_ld_disp_ex_id            ),
     .acc_st_disp_i              ( acc_st_disp_ex_id            ),
     .acc_flush_undisp_i         ( acc_flush_undisp_ex_id       ),
-    .acc_ld_complete_i          ( acc_resp_i.load_complete     ),
-    .acc_st_complete_i          ( acc_resp_i.store_complete    ),
+    .acc_ld_complete_i          ( acc_resp.load_complete       ),
+    .acc_st_complete_i          ( acc_resp.store_complete      ),
     .acc_cons_en_i              ( acc_cons_en_csr              ),
     // Commit
     .resolved_branch_i          ( resolved_branch              ),
@@ -526,12 +567,12 @@ module cva6 import ariane_pkg::*; #(
     .cvxif_req_o            ( cvxif_req_o                 ),
     .cvxif_resp_i           ( cvxif_resp_i                ),
     // Accelerator
-    .acc_req_o              ( acc_req_o                   ),
-    .acc_req_valid_o        ( acc_req_valid_o             ),
-    .acc_req_ready_i        ( acc_req_ready_i             ),
-    .acc_resp_i             ( acc_resp_i                  ),
-    .acc_resp_valid_i       ( acc_resp_valid_i            ),
-    .acc_resp_ready_o       ( acc_resp_ready_o            ),
+    .acc_req_o              ( acc_req                     ),
+    .acc_req_valid_o        ( acc_req_valid               ),
+    .acc_req_ready_i        ( acc_req_ready               ),
+    .acc_resp_i             ( acc_resp                    ),
+    .acc_resp_valid_i       ( acc_resp_valid              ),
+    .acc_resp_ready_o       ( acc_resp_ready              ),
     .acc_ready_o            ( acc_ready_ex_id             ),
     .acc_valid_i            ( acc_valid_id_ex             ),
     .acc_ld_disp_o          ( acc_ld_disp_ex_id           ),
@@ -651,8 +692,8 @@ module cva6 import ariane_pkg::*; #(
     .set_debug_pc_o         ( set_debug_pc                  ),
     .trap_vector_base_o     ( trap_vector_base_commit_pcgen ),
     .priv_lvl_o             ( priv_lvl                      ),
-    .acc_fflags_ex_i        ( acc_resp_i.fflags             ),
-    .acc_fflags_ex_valid_i  ( acc_resp_i.fflags_valid       ),
+    .acc_fflags_ex_i        ( acc_resp.fflags               ),
+    .acc_fflags_ex_valid_i  ( acc_resp.fflags_valid         ),
     .fs_o                   ( fs                            ),
     .fflags_o               ( fflags_csr_commit             ),
     .frm_o                  ( frm_csr_id_issue_ex           ),
@@ -725,7 +766,7 @@ module cva6 import ariane_pkg::*; #(
     .flush_tlb_o            ( flush_tlb_ctrl_ex             ),
     .flush_dcache_o         ( dcache_flush_ctrl_cache       ),
     .flush_dcache_ack_i     ( dcache_flush_ack_cache_ctrl   ),
-    .acc_store_pending_i    ( acc_resp_i.store_pending      ),
+    .acc_store_pending_i    ( acc_resp.store_pending        ),
 
     .halt_csr_i             ( halt_csr_ctrl                 ),
     .halt_o                 ( halt_ctrl                     ),
@@ -791,9 +832,9 @@ module cva6 import ariane_pkg::*; #(
     .axi_req_o             ( axi_req_o                   ),
     .axi_resp_i            ( axi_resp_i                  ),
 `endif
-    .inval_addr_i          ( inval_addr_i                ),
-    .inval_valid_i         ( inval_valid_i               ),
-    .inval_ready_o         ( inval_ready_o               )
+    .inval_addr_i          ( inval_addr                  ),
+    .inval_valid_i         ( inval_valid                 ),
+    .inval_ready_o         ( inval_ready                 )
   );
 `else
 
@@ -851,6 +892,7 @@ module cva6 import ariane_pkg::*; #(
   `ifndef VERILATOR
   initial ariane_pkg::check_cfg(ArianeCfg);
   `endif
+  initial ariane_pkg::acc_port_check();
   // pragma translate_on
 
   // -------------------

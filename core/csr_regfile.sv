@@ -294,7 +294,7 @@ module csr_regfile import ariane_pkg::*; #(
                 riscv::CSR_DCACHE:           csr_rdata = dcache_q;
                 riscv::CSR_ICACHE:           csr_rdata = icache_q;
                 // custom (non RISC-V) accelerator memory consistency mode
-                riscv::CSR_ACC_CONS:         csr_rdata = acc_cons_q;
+                riscv::CSR_ACC_CONS:         csr_rdata = ENABLE_ACCELERATOR ? acc_cons_q : '0;
                 // PMPs
                 riscv::CSR_PMPCFG0:          csr_rdata = pmpcfg_q[riscv::XLEN/8-1:0];
                 riscv::CSR_PMPCFG1:          if (riscv::XLEN == 32) csr_rdata = pmpcfg_q[7:4]; else read_access_exception = 1'b1;
@@ -627,7 +627,7 @@ module csr_regfile import ariane_pkg::*; #(
 
                 riscv::CSR_DCACHE:             dcache_d    = {{riscv::XLEN-1{1'b0}}, csr_wdata[0]}; // enable bit
                 riscv::CSR_ICACHE:             icache_d    = {{riscv::XLEN-1{1'b0}}, csr_wdata[0]}; // enable bit
-                riscv::CSR_ACC_CONS:           acc_cons_d  = {{riscv::XLEN-1{1'b0}}, csr_wdata[0]}; // enable bit
+                riscv::CSR_ACC_CONS:           if (ENABLE_ACCELERATOR) acc_cons_d  = {{riscv::XLEN-1{1'b0}}, csr_wdata[0]}; // enable bit
                 // PMP locked logic
                 // 1. refuse to update any locked entry
                 // 2. also refuse to update the entry below a locked TOR entry
@@ -1112,7 +1112,7 @@ module csr_regfile import ariane_pkg::*; #(
     assign icache_en_o      = icache_q[0] & (~debug_mode_q);
 `endif
     assign dcache_en_o      = dcache_q[0];
-    assign acc_cons_en_o    = acc_cons_q[0];
+    assign acc_cons_en_o    = ENABLE_ACCELERATOR ? acc_cons_q[0] : 1'b0;
 
     // determine if mprv needs to be considered if in debug mode
     assign mprv             = (debug_mode_q && !dcsr_q.mprven) ? 1'b0 : mstatus_q.mprv;
@@ -1153,7 +1153,7 @@ module csr_regfile import ariane_pkg::*; #(
             mtval_q                <= {riscv::XLEN{1'b0}};
             dcache_q               <= {{riscv::XLEN-1{1'b0}}, 1'b1};
             icache_q               <= {{riscv::XLEN-1{1'b0}}, 1'b1};
-            acc_cons_q             <= {{riscv::XLEN-1{1'b0}}, 1'b1};
+            acc_cons_q             <= {{riscv::XLEN-1{1'b0}}, ENABLE_ACCELERATOR};
             // supervisor mode registers
             sepc_q                 <= {riscv::XLEN{1'b0}};
             scause_q               <= {riscv::XLEN{1'b0}};

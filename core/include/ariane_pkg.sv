@@ -171,15 +171,20 @@ package ariane_pkg;
     localparam bit RVD = (riscv::IS_XLEN64 ? 1:0) & riscv::FPU_EN;              // Is D extension enabled for only 64 bit CPU
 `endif
     localparam bit RVA = cva6_config_pkg::CVA6ConfigAExtEn; // Is A extension enabled
+    localparam bit RVV = cva6_config_pkg::CVA6ConfigVExtEn;
 
-`ifdef RVV_ARIANE
-    localparam bit RVV = `RVV_ARIANE;
+    // Is the accelerator enabled?
+`ifdef ARIANE_ACCELERATOR_PORT
+    localparam bit ENABLE_ACCELERATOR = `ARIANE_ACCELERATOR_PORT;
 `else
-    localparam bit RVV = 1'b0;
+    localparam bit ENABLE_ACCELERATOR = 1'b0;
 `endif
 
-    // Is there an accelerator enabled?
-    localparam bit ENABLE_ACCELERATOR = RVV;
+    function automatic void acc_port_check();
+        if (RVV && !ENABLE_ACCELERATOR) begin : err_missing_acc_port
+            $error("V extension but no accelerator port enabled. Please define ARIANE_ACCELERATOR_PORT.");
+        end
+    endfunction
 
     // Transprecision floating-point extensions configuration
     localparam bit XF16    = cva6_config_pkg::CVA6ConfigF16En | RVV; // Is half-precision float extension (Xf16) enabled
@@ -238,8 +243,8 @@ package ariane_pkg;
 
     localparam bit CVXIF_PRESENT = cva6_config_pkg::CVA6ConfigCvxifEn;
 
-    // when cvx interface is present, use an additional writeback port
-    localparam NR_WB_PORTS = CVXIF_PRESENT ? 6 : 5;
+    // when cvx interface or the accelerator port is present, use an additional writeback port
+    localparam NR_WB_PORTS = (CVXIF_PRESENT || ENABLE_ACCELERATOR) ? 5 : 4;
 
     // Read ports for general purpose register files
     localparam NR_RGPR_PORTS = 2;
@@ -330,11 +335,10 @@ package ariane_pkg;
 
     localparam FETCH_USER_WIDTH = (cva6_config_pkg::CVA6ConfigFetchUserEn == 0) ? 1: cva6_config_pkg::CVA6ConfigFetchUserWidth;  // Possible cases: between 1 and 64
     localparam DATA_USER_WIDTH = (cva6_config_pkg::CVA6ConfigDataUserEn == 0) ? 1: cva6_config_pkg::CVA6ConfigDataUserWidth;    // Possible cases: between 1 and 64
-    localparam AXI_USER_WIDTH = DATA_USER_WIDTH > FETCH_USER_WIDTH*2 ? DATA_USER_WIDTH : FETCH_USER_WIDTH*2;
+    localparam AXI_USER_EN = cva6_config_pkg::CVA6ConfigDataUserEn | cva6_config_pkg::CVA6ConfigFetchUserEn;
+    localparam AXI_USER_WIDTH = AXI_USER_EN ? (DATA_USER_WIDTH > FETCH_USER_WIDTH*2 ? DATA_USER_WIDTH : FETCH_USER_WIDTH*2) : 1;
     localparam DATA_USER_EN = cva6_config_pkg::CVA6ConfigDataUserEn;
     localparam FETCH_USER_EN = cva6_config_pkg::CVA6ConfigFetchUserEn;
-    localparam AXI_USER_EN = cva6_config_pkg::CVA6ConfigDataUserEn | cva6_config_pkg::CVA6ConfigFetchUserEn;
-
 
     // ---------------
     // Fetch Stage
@@ -723,7 +727,6 @@ package ariane_pkg;
         logic [(riscv::XLEN/8)-1:0] lsu_wmask;
         riscv::xlen_t               lsu_wdata;
 `endif
-
         logic                     vfp;           // is this a vector floating-point instruction?
     } scoreboard_entry_t;
 
