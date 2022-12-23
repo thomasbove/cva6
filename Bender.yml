@@ -34,7 +34,6 @@ sources:
     - corev_apu/tb/ariane_axi_soc_pkg.sv
     - core/include/ariane_axi_pkg.sv
     - core/include/std_cache_pkg.sv
-    - vendor/pulp-platform/fpnew/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
     - core/include/cvxif_pkg.sv
     - core/cvxif_example/include/cvxif_instr_pkg.sv
     - core/include/ariane_rvfi_pkg.sv
@@ -88,6 +87,7 @@ sources:
     - vendor/pulp-platform/fpnew/src/fpnew_opgroup_block.sv
     - vendor/pulp-platform/fpnew/src/fpnew_rounding.sv
     - vendor/pulp-platform/fpnew/src/fpnew_top.sv
+    - vendor/pulp-platform/fpnew/src/fpu_div_sqrt_mvp/hdl/defs_div_sqrt_mvp.sv
     - vendor/pulp-platform/fpnew/src/fpu_div_sqrt_mvp/hdl/iteration_div_sqrt_mvp.sv
     - vendor/pulp-platform/fpnew/src/fpu_div_sqrt_mvp/hdl/nrbd_nrsc_mvp.sv
     - vendor/pulp-platform/fpnew/src/fpu_div_sqrt_mvp/hdl/div_sqrt_top_mvp.sv
@@ -153,9 +153,14 @@ sources:
     - corev_apu/riscv-dbg/debug_rom/debug_rom.sv
     - corev_apu/register_interface/src/apb_to_reg.sv
     - common/local/techlib/fpga/rtl/SyncSpRamBeNx64.sv
-    - target: not(cv32a6)
+    - target: not(any(cv32a6,cv64a6v))
       files:
       - core/include/cv64a6_imafdc_sv39_config_pkg.sv
+    - target: cv64a6v
+      files:
+      - core/include/cv64a6_imafdcv_sv39_config_pkg.sv
+    - target: not(cv32a6)
+      files:
       - core/mmu_sv39/tlb.sv
       - core/mmu_sv39/mmu.sv
       - core/mmu_sv39/ptw.sv
