@@ -85,7 +85,7 @@ sources:
           - common/local/util/instr_tracer_if.sv
           - common/local/util/instr_tracer.sv
           - common/local/util/sram.sv
-          - common/local/util/tc_sram_xilinx_wrapper.sv
+          - common/local/util/tc_sram_fpga_wrapper.sv
       # Stand-alone source files
       - core/ariane.sv
       - core/cva6.sv
@@ -105,7 +105,6 @@ sources:
       - core/scoreboard.sv
       - core/perf_counters.sv
       - core/store_unit.sv
-      - core/axi_adapter.sv
       - core/fpu_wrap.sv
       - core/csr_regfile.sv
       - core/commit_stage.sv
@@ -169,6 +168,7 @@ sources:
     #   - corev_apu/tb/common/uart.sv
     #   - corev_apu/tb/common/SimDTM.sv
     #   - corev_apu/tb/common/SimJTAG.sv
+    #   - corev_apu/tb/axi_adapter.sv
 
     # - target: not(synthesis)
     #   files:
