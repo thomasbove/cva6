@@ -166,6 +166,7 @@ sources:
       # Tracer (behavioral code, not RTL)
       - include_dirs:
         - common/local/util
+        - core/include
         files:
           - common/local/util/instr_tracer_if.sv
           - common/local/util/instr_tracer.sv
