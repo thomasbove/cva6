@@ -10,6 +10,8 @@ package:
 sources:
   - defines:
       WT_DCACHE: 1
+      RVFI_TRACE: 1 # for synthesis has to be deactivate if instr_trace is needed
+      VERILATOR: 1 # used for proper deactivation of instr_trace
     files:
       - target: cv64a6_imafdc_sv39
         files:
@@ -59,7 +61,6 @@ sources:
       - core/include/wt_cache_pkg.sv
       - core/include/std_cache_pkg.sv
       - core/include/axi_intf.sv
-      - core/include/instr_tracer_pkg.sv
 
       # CVXIF
       - core/include/cvxif_pkg.sv
@@ -166,10 +167,7 @@ sources:
       # Tracer (behavioral code, not RTL)
       - include_dirs:
         - common/local/util
-        - core/include
         files:
-          - common/local/util/instr_tracer_if.sv
-          - common/local/util/instr_tracer.sv
           - common/local/util/tc_sram_wrapper.sv
           - common/local/util/sram.sv
           - vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv
