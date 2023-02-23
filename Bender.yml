@@ -23,23 +23,12 @@ sources:
   - defines:
       WT_DCACHE: 1
     files:
-      # included via target core/include/${TARGET_CFG}_config_pkg.sv
-      - core/include/riscv_pkg.sv
-      - core/include/ariane_dm_pkg.sv
-      - core/include/ariane_pkg.sv
-      # ariane_axi_pkg is dependent on this.
-      - vendor/pulp-platform/axi/src/axi_pkg.sv
-      - core/include/ariane_rvfi_pkg.sv
-
-      # Packages
-      - core/include/ariane_axi_pkg.sv
-      - core/include/wt_cache_pkg.sv
-      - core/include/std_cache_pkg.sv
-      - core/include/axi_intf.sv
-
       - target: cv64a6_imafdc_sv39
         files:
           - core/include/cv64a6_imafdc_sv39_config_pkg.sv
+          - core/include/riscv_pkg.sv
+          - core/include/ariane_dm_pkg.sv
+          - core/include/ariane_pkg.sv
           - core/mmu_sv39/tlb.sv
           - core/mmu_sv39/mmu.sv
           - core/mmu_sv39/ptw.sv
@@ -47,6 +36,9 @@ sources:
       - target: cv32a6_imac_sv0
         files:
           - core/include/cv32a6_imac_sv0_config_pkg.sv
+          - core/include/riscv_pkg.sv
+          - core/include/ariane_dm_pkg.sv
+          - core/include/ariane_pkg.sv
           - core/mmu_sv32/cva6_tlb_sv32.sv
           - core/mmu_sv32/cva6_mmu_sv32.sv
           - core/mmu_sv32/cva6_ptw_sv32.sv
@@ -54,6 +46,9 @@ sources:
       - target: cv32a6_imac_sv32
         files:
           - core/include/cv32a6_imac_sv32_config_pkg.sv
+          - core/include/riscv_pkg.sv
+          - core/include/ariane_dm_pkg.sv
+          - core/include/ariane_pkg.sv
           - core/mmu_sv32/cva6_tlb_sv32.sv
           - core/mmu_sv32/cva6_mmu_sv32.sv
           - core/mmu_sv32/cva6_ptw_sv32.sv
@@ -61,9 +56,23 @@ sources:
       - target: cv32a6_imafc_sv32
         files:
           - core/include/cv32a6_imafc_sv32_config_pkg.sv
+          - core/include/riscv_pkg.sv
+          - core/include/ariane_dm_pkg.sv
+          - core/include/ariane_pkg.sv
           - core/mmu_sv32/cva6_tlb_sv32.sv
           - core/mmu_sv32/cva6_mmu_sv32.sv
           - core/mmu_sv32/cva6_ptw_sv32.sv
+
+      # included via target core/include/${TARGET_CFG}_config_pkg.sv
+      # ariane_axi_pkg is dependent on this.
+      # - vendor/pulp-platform/axi/src/axi_pkg.sv
+      - core/include/ariane_rvfi_pkg.sv
+
+      # Packages
+      - core/include/ariane_axi_pkg.sv
+      - core/include/wt_cache_pkg.sv
+      - core/include/std_cache_pkg.sv
+      - core/include/axi_intf.sv
 
       # for all the below files use Flist.cva6 as baseline and also look at Makefile pd/synth
 
@@ -179,9 +188,11 @@ sources:
         files:
           - common/local/util/tc_sram_wrapper.sv
           - common/local/util/sram.sv
-          - vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv
+          # - vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv
 
       - target: not(synthesis)
+        include_dirs:
+          - core/include
         files:
           # Tracer (behavioral code, not RTL)
           - common/local/util/instr_tracer.sv
