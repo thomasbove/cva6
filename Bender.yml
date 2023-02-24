@@ -184,11 +184,22 @@ sources:
       - core/pmp/src/pmp_entry.sv
 
       - include_dirs:
+        - common/local/util
+        files:
+          - common/local/util/sram.sv
+
+      - target: not(all(fpga, xilinx))
+        include_dirs:
           - common/local/util
         files:
           - common/local/util/tc_sram_wrapper.sv
-          - common/local/util/sram.sv
           # - vendor/pulp-platform/tech_cells_generic/src/rtl/tc_sram.sv
+
+      - target: all(fpga, xilinx)
+        include_dirs:
+          - common/local/util
+        files:
+          - common/local/util/tc_sram_fpga_wrapper.sv
 
       - target: not(synthesis)
         include_dirs:
