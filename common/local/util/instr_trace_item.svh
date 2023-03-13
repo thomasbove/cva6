@@ -22,6 +22,8 @@ function string printPCexpr(input logic [63:0] imm);
   end
 endfunction
 
+`include "instr_tracer_pkg.sv"
+
 class instr_trace_item;
     // keep a couple of general purpose information inside this instruction item
     time               simtime;
