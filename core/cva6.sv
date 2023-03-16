@@ -807,7 +807,7 @@ module cva6 import ariane_pkg::*; #(
   // -------------------
   // CLIC Controller
   // -------------------
-  if (ArianeCfg.CLICEnable) begin : gen_clic_controller
+  if (ariane_pkg::RVSCLIC) begin : gen_clic_controller
     cva6_clic_controller #(
       .ArianeCfg (ArianeCfg)
     ) i_clic_controller (
