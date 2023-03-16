@@ -279,9 +279,9 @@ module cva6 import ariane_pkg::*; #(
   logic [(riscv::XLEN/8)-1:0]           lsu_wmask;
   logic [ariane_pkg::TRANS_ID_BITS-1:0] lsu_addr_trans_id;
 
-  // ---------------------
-  // CLIC Controller <-> *
-  // ---------------------
+  // ----------------------
+  // CLIC Controller <-> ID
+  // ----------------------
   logic         clic_irq_req_id;
   riscv::xlen_t clic_irq_cause_id;
 
