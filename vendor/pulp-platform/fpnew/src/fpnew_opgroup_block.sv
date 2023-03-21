@@ -8,6 +8,8 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: SHL-0.51
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
@@ -133,9 +135,9 @@ module fpnew_opgroup_block #(
     // If the format wants to use merged ops, tie off the dangling ones not used here
     end else if (FpFmtMask[fmt] && ANY_MERGED && !IS_FIRST_MERGED) begin : merged_unused
 
+      localparam FMT = fpnew_pkg::get_first_enabled_multi(FmtUnitTypes, FpFmtMask);
       // Ready is split up into formats
-      assign fmt_in_ready[fmt]  = fmt_in_ready[fpnew_pkg::get_first_enabled_multi(FmtUnitTypes,
-                                                                                  FpFmtMask)];
+      assign fmt_in_ready[fmt]  = fmt_in_ready[int'(FMT)];
 
       assign fmt_out_valid[fmt] = 1'b0; // don't emit values
       assign fmt_busy[fmt]      = 1'b0; // never busy

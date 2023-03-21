@@ -8,6 +8,8 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: SHL-0.51
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
@@ -72,8 +74,8 @@ module fpnew_fma_multi #(
   // datapath leakage. This is either given by the exponent bits or the width of the LZC result.
   // In most reasonable FP formats the internal exponent will be wider than the LZC result.
   localparam int unsigned EXP_WIDTH = fpnew_pkg::maximum(SUPER_EXP_BITS + 2, LZC_RESULT_WIDTH);
-  // Shift amount width: maximum internal mantissa size is 3p+3 bits
-  localparam int unsigned SHIFT_AMOUNT_WIDTH = $clog2(3 * PRECISION_BITS + 3);
+  // Shift amount width: maximum internal mantissa size is 3p+4 bits
+  localparam int unsigned SHIFT_AMOUNT_WIDTH = $clog2(3 * PRECISION_BITS + 5);
   // Pipelines
   localparam NUM_INP_REGS = PipeConfig == fpnew_pkg::BEFORE
                             ? NumPipeRegs
@@ -221,7 +223,7 @@ module fpnew_fma_multi #(
   // | FNMSUB   | \c 1        | FNMADD: Invert sign of operands A and C
   // | ADD      | \c 0        | ADD: Set operand A to +1.0
   // | ADD      | \c 1        | SUB: Set operand A to +1.0, invert sign of operand C
-  // | MUL      | \c 0        | MUL: Set operand C to +0.0
+  // | MUL      | \c 0        | MUL: Set operand C to +0.0 or -0.0 depending on the rounding mode
   // | *others* | \c -        | *invalid*
   // \note \c op_mod_q always inverts the sign of the addend.
   always_comb begin : op_select
@@ -244,8 +246,11 @@ module fpnew_fma_multi #(
         operand_a = '{sign: 1'b0, exponent: fpnew_pkg::bias(src_fmt_q), mantissa: '0};
         info_a    = '{is_normal: 1'b1, is_boxed: 1'b1, default: 1'b0}; //normal, boxed value.
       end
-      fpnew_pkg::MUL: begin // Set addend to -0 (for proper rounding with RDN)
-        operand_c = '{sign: 1'b1, exponent: '0, mantissa: '0};
+      fpnew_pkg::MUL: begin // Set addend to +0 or -0, depending whether the rounding mode is RDN
+        if (inp_pipe_rnd_mode_q[NUM_INP_REGS] == fpnew_pkg::RDN)
+          operand_c = '{sign: 1'b0, exponent: '0, mantissa: '0};
+        else
+          operand_c = '{sign: 1'b1, exponent: '0, mantissa: '0};
         info_c    = '{is_zero: 1'b1, is_boxed: 1'b1, default: 1'b0}; //zero, boxed value.
       end
       default: begin // propagate don't cares
@@ -341,6 +346,8 @@ module fpnew_fma_multi #(
       end
     end else begin : inactive_format
       assign fmt_special_result[fmt] = '{default: fpnew_pkg::DONT_CARE};
+      assign fmt_special_status[fmt] = '0;
+      assign fmt_result_is_special[fmt] = 1'b0;
     end
   end
 

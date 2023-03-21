@@ -13,9 +13,9 @@
     // Upstream repository
     upstream: {
         // URL
-        url: "https://github.com/pulp-platform/fpnew.git",
+        url: "https://github.com/openhwgroup/cvfpu.git",
         // revision
-        rev: "vec",
+        rev: "v0.7.0",
     }
 
     // Patch dir for local changes

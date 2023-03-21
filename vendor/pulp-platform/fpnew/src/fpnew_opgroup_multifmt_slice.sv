@@ -8,6 +8,8 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: SHL-0.51
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
@@ -331,9 +333,16 @@ module fpnew_opgroup_multifmt_slice #(
       // Set up some constants
       localparam int unsigned FP_WIDTH = fpnew_pkg::fp_width(fpnew_pkg::fp_format_e'(fmt));
       // only for active formats within the lane
-      if (ACTIVE_FORMATS[fmt])
+      if (ACTIVE_FORMATS[fmt]) begin
         assign fmt_slice_result[fmt][(LANE+1)*FP_WIDTH-1:LANE*FP_WIDTH] =
             local_result[FP_WIDTH-1:0];
+      end else if ((LANE+1)*FP_WIDTH <= Width) begin
+        assign fmt_slice_result[fmt][(LANE+1)*FP_WIDTH-1:LANE*FP_WIDTH] =
+            '{default: lane_ext_bit[LANE]};
+      end else if (LANE*FP_WIDTH < Width) begin
+        assign fmt_slice_result[fmt][Width-1:LANE*FP_WIDTH] =
+            '{default: lane_ext_bit[LANE]};
+      end
     end
 
     // Generate result packing depending on integer format
@@ -341,9 +350,14 @@ module fpnew_opgroup_multifmt_slice #(
       for (genvar ifmt = 0; ifmt < NUM_INT_FORMATS; ifmt++) begin : pack_int_result
         // Set up some constants
         localparam int unsigned INT_WIDTH = fpnew_pkg::int_width(fpnew_pkg::int_format_e'(ifmt));
-        if (ACTIVE_INT_FORMATS[ifmt])
+        if (ACTIVE_INT_FORMATS[ifmt]) begin
           assign ifmt_slice_result[ifmt][(LANE+1)*INT_WIDTH-1:LANE*INT_WIDTH] =
             local_result[INT_WIDTH-1:0];
+        end else if ((LANE+1)*INT_WIDTH <= Width) begin
+          assign ifmt_slice_result[ifmt][(LANE+1)*INT_WIDTH-1:LANE*INT_WIDTH] = '0;
+        end else if (LANE*INT_WIDTH < Width) begin
+          assign ifmt_slice_result[ifmt][Width-1:LANE*INT_WIDTH] = '0;
+        end
       end
     end
   end
