@@ -746,9 +746,13 @@ module ariane_testharness #(
 
   // apb2reg interface
 
+  // wrap register interface as req/resp for clic
+  localparam int unsigned REG_BUS_ADDR_WIDTH = 14;
+  localparam int unsigned REG_BUS_DATA_WIDTH = 32;
+
   REG_BUS #(
-      .ADDR_WIDTH ( 32 ),
-      .DATA_WIDTH ( 32 )
+      .ADDR_WIDTH ( REG_BUS_ADDR_WIDTH ),
+      .DATA_WIDTH ( REG_BUS_DATA_WIDTH )
   ) reg_bus (clk_i);
 
   apb_to_reg i_apb_to_reg (
@@ -765,9 +769,6 @@ module ariane_testharness #(
       .reg_o     ( reg_bus      )
   );
 
-  // wrap register interface as req/resp for clic
-  localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
-  localparam int unsigned REG_BUS_DATA_WIDTH = 32;
 
 `define REG_BUS_TYPEDEF_REQ(req_t, addr_t, data_t, strb_t) \
     typedef struct packed { \
