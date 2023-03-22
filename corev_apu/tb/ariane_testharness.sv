@@ -366,8 +366,8 @@ module ariane_testharness #(
   `AXI_ASSIGN_FROM_RESP(master[ariane_soc::GPIO], gpio_resp)
   axi_err_slv #(
     .AxiIdWidth ( ariane_soc::IdWidthSlave   ),
-    .req_t      ( ariane_axi_soc::req_slv_t  ),
-    .resp_t     ( ariane_axi_soc::resp_slv_t )
+    .axi_req_t  ( ariane_axi_soc::req_slv_t  ),
+    .axi_resp_t ( ariane_axi_soc::resp_slv_t )
   ) i_gpio_err_slv (
     .clk_i      ( clk_i      ),
     .rst_ni     ( ndmreset_n ),
@@ -505,6 +505,7 @@ module ariane_testharness #(
     MaxSlvTrans: 1, // Probably requires update
     FallThrough: 1'b0,
     LatencyMode: axi_pkg::NO_LATENCY,
+    PipelineStages: 0,
     AxiIdWidthSlvPorts: ariane_soc::IdWidth,
     AxiIdUsedSlvPorts: ariane_soc::IdWidth,
     UniqueIds: 1'b0,
