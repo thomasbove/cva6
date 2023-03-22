@@ -168,6 +168,7 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         corev_apu/riscv-dbg/src/dm_sba.sv                                            \
         corev_apu/riscv-dbg/src/dm_top.sv                                            \
         corev_apu/riscv-dbg/debug_rom/debug_rom.sv                                   \
+        corev_apu/register_interface/src/axi_lite_to_reg.sv                          \
         corev_apu/register_interface/src/apb_to_reg.sv                               \
         vendor/pulp-platform/axi/src/axi_multicut.sv                                            \
         vendor/pulp-platform/common_cells/src/rstgen_bypass.sv                          \
@@ -177,6 +178,8 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         vendor/pulp-platform/common_cells/src/exp_backoff.sv                            \
         vendor/pulp-platform/common_cells/src/addr_decode.sv                            \
         vendor/pulp-platform/common_cells/src/stream_register.sv                        \
+        vendor/pulp-platform/common_cells/src/id_queue.sv                               \
+        vendor/pulp-platform/common_cells/src/onehot_to_bin.sv                          \
         vendor/pulp-platform/axi/src/axi_cut.sv                                                 \
         vendor/pulp-platform/axi/src/axi_join.sv                                                \
         vendor/pulp-platform/axi/src/axi_delayer.sv                                             \
@@ -187,6 +190,12 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         vendor/pulp-platform/axi/src/axi_mux.sv                                                 \
         vendor/pulp-platform/axi/src/axi_demux.sv                                               \
         vendor/pulp-platform/axi/src/axi_xbar.sv                                                \
+        vendor/pulp-platform/axi/src/axi_modify_address.sv                                      \
+        vendor/pulp-platform/axi/src/axi_burst_splitter.sv                                      \
+        vendor/pulp-platform/axi/src/axi_dw_upsizer.sv                                          \
+        vendor/pulp-platform/axi/src/axi_dw_downsizer.sv                                        \
+        vendor/pulp-platform/axi/src/axi_dw_converter.sv                                        \
+        vendor/pulp-platform/axi/src/axi_lite_dw_converter.sv                                   \
         vendor/pulp-platform/common_cells/src/cdc_2phase.sv                             \
         vendor/pulp-platform/common_cells/src/spill_register_flushable.sv               \
         vendor/pulp-platform/common_cells/src/spill_register.sv                         \
