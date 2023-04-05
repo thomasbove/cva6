@@ -428,10 +428,15 @@ end else begin : gen_piton_offset
 
   for (genvar i = 0; i < ICACHE_SET_ASSOC; i++) begin : gen_sram
     // Tag RAM
-    sram #(
+    tc_sram #(
       // tag + valid bit
-      .DATA_WIDTH ( ICACHE_TAG_WIDTH+1 ),
-      .NUM_WORDS  ( ICACHE_NUM_WORDS   )
+      .DataWidth   ( ICACHE_TAG_WIDTH+1 ),
+      .NumWords    ( ICACHE_NUM_WORDS   ),
+      .ByteWidth   ( 32'd8              ),
+      .NumPorts    ( 32'd1              ),
+      .Latency     ( 32'd1              ),
+      .SimInit     ( "none"             ),
+      .PrintSimCfg ( 1'b1               ) 
     ) tag_sram (
       .clk_i     ( clk_i                    ),
       .rst_ni    ( rst_ni                   ),
@@ -440,10 +445,8 @@ end else begin : gen_piton_offset
       .addr_i    ( vld_addr                 ),
       // we can always use the saved tag here since it takes a
       // couple of cycle until we write to the cache upon a miss
-      .wuser_i   ( '0                       ),
       .wdata_i   ( {vld_wdata[i], cl_tag_q} ),
       .be_i      ( '1                       ),
-      .ruser_o   (                          ),
       .rdata_o   ( cl_tag_valid_rdata[i]    )
     );
 
@@ -451,23 +454,46 @@ end else begin : gen_piton_offset
     assign vld_rdata[i]    = cl_tag_valid_rdata[i][ICACHE_TAG_WIDTH];
 
     // Data RAM
-    sram #(
-      .USER_WIDTH ( ICACHE_USER_LINE_WIDTH ),
-      .DATA_WIDTH ( ICACHE_LINE_WIDTH ),
-      .USER_EN    ( ariane_pkg::FETCH_USER_EN ),
-      .NUM_WORDS  ( ICACHE_NUM_WORDS  )
+    tc_sram #(
+      .DataWidth   ( ICACHE_LINE_WIDTH  ),
+      .NumWords    ( ICACHE_NUM_WORDS   ),
+      .ByteWidth   ( 32'd8              ),
+      .NumPorts    ( 32'd1              ),
+      .Latency     ( 32'd1              ),
+      .SimInit     ( "none"             ),
+      .PrintSimCfg ( 1'b1               ) 
     ) data_sram (
-      .clk_i     ( clk_i               ),
-      .rst_ni    ( rst_ni              ),
-      .req_i     ( cl_req[i]           ),
-      .we_i      ( cl_we               ),
-      .addr_i    ( cl_index            ),
-      .wuser_i   ( mem_rtrn_i.user     ),
-      .wdata_i   ( mem_rtrn_i.data     ),
-      .be_i      ( '1                  ),
-      .ruser_o   ( cl_ruser[i]         ),
-      .rdata_o   ( cl_rdata[i]         )
+      .clk_i     ( clk_i           ),
+      .rst_ni    ( rst_ni          ),
+      .req_i     ( cl_req[i]       ),
+      .we_i      ( cl_we           ),
+      .addr_i    ( cl_index        ),
+      .wdata_i   ( mem_rtrn_i.data ),
+      .be_i      ( '1              ),
+      .rdata_o   ( cl_rdata[i]     )
     );
+    
+    if(ariane_pkg::FETCH_USER_EN) begin: gen_mem_user
+       tc_sram #(
+         .DataWidth   ( ICACHE_USER_LINE_WIDTH ),
+         .NumWords    ( ICACHE_NUM_WORDS       ),
+         .ByteWidth   ( 32'd8                  ),
+         .NumPorts    ( 32'd1                  ),
+         .Latency     ( 32'd1                  ),
+         .SimInit     ( "none"                 ),
+         .PrintSimCfg ( 1'b1                   )
+       ) data_sram (
+         .clk_i     ( clk_i           ),
+         .rst_ni    ( rst_ni          ),
+         .req_i     ( cl_req[i]       ),
+         .we_i      ( cl_we           ),
+         .addr_i    ( cl_index        ),
+         .wdata_i   ( mem_rtrn_i.user ),
+         .be_i      ( '1              ),
+         .rdata_o   ( cl_ruser[i]     )
+       );
+    end // block: gen_mem_user
+           
   end
 
 
