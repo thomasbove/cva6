@@ -184,9 +184,13 @@ import std_cache_pkg::*;
     // --------------
     for (genvar i = 0; i < DCACHE_SET_ASSOC; i++) begin : sram_block
         tc_sram #(
-            .DataWidth ( DCACHE_LINE_WIDTH                  ),
-            .NumWords  ( DCACHE_NUM_WORDS                   ),
-            .NumPorts  ( 1                                  )
+            .DataWidth   ( DCACHE_LINE_WIDTH ),
+            .NumWords    ( DCACHE_NUM_WORDS  ),
+            .ByteWidth   ( 32'd8             ),
+            .NumPorts    ( 32'd1             ),
+            .Latency     ( 32'd1             ),
+            .SimInit     ( "none"            ),
+            .PrintSimCfg ( 1'b1              )
         ) data_sram (
             .req_i   ( req_ram [i]                          ),
             .rst_ni  ( rst_ni                               ),
@@ -199,9 +203,13 @@ import std_cache_pkg::*;
         );
 
         tc_sram #(
-            .DataWidth ( DCACHE_TAG_WIDTH                   ),
-            .NumWords  ( DCACHE_NUM_WORDS                   ),
-            .NumPorts  ( 1                                  )
+            .DataWidth   ( DCACHE_TAG_WIDTH ),
+            .NumWords    ( DCACHE_NUM_WORDS ),
+            .ByteWidth   ( 32'd8            ),
+            .NumPorts    ( 32'd1            ),
+            .Latency     ( 32'd1            ),
+            .SimInit     ( "none"           ),
+            .PrintSimCfg ( 1'b1             )
         ) tag_sram (
             .req_i   ( req_ram [i]                          ),
             .rst_ni  ( rst_ni                               ),
@@ -232,9 +240,13 @@ import std_cache_pkg::*;
     end
 
     tc_sram #(
-        .DataWidth ( 4*DCACHE_DIRTY_WIDTH             ),
-        .NumWords  ( DCACHE_NUM_WORDS                 ),
-        .NumPorts  ( 1                                )
+        .DataWidth   ( 4*DCACHE_DIRTY_WIDTH ),
+        .NumWords    ( DCACHE_NUM_WORDS     ),
+        .ByteWidth   ( 32'd8                ),
+        .NumPorts    ( 32'd1                ),
+        .Latency     ( 32'd1                ),
+        .SimInit     ( "none"               ),
+        .PrintSimCfg ( 1'b1                 )
     ) valid_dirty_sram (
         .clk_i   ( clk_i                               ),
         .rst_ni  ( rst_ni                              ),

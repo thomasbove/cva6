@@ -430,9 +430,13 @@ end else begin : gen_piton_offset
     // Tag RAM
     tc_sram #(
       // tag + valid bit
-      .DataWidth ( ICACHE_TAG_WIDTH+1 ),
-      .NumWords  ( ICACHE_NUM_WORDS   ),
-      .NumPorts  ( 1                  )
+      .DataWidth   ( ICACHE_TAG_WIDTH+1 ),
+      .NumWords    ( ICACHE_NUM_WORDS   ),
+      .ByteWidth   ( 32'd8              ),
+      .NumPorts    ( 32'd1              ),
+      .Latency     ( 32'd1              ),
+      .SimInit     ( "none"             ),
+      .PrintSimCfg ( 1'b1               )
     ) tag_sram (
       .clk_i     ( clk_i                    ),
       .rst_ni    ( rst_ni                   ),
@@ -451,9 +455,13 @@ end else begin : gen_piton_offset
 
     // Data RAM
     tc_sram #(
-      .DataWidth ( ICACHE_LINE_WIDTH ),
-      .NumWords  ( ICACHE_NUM_WORDS  ),
-      .NumPorts  ( 1                 )
+      .DataWidth   ( ICACHE_LINE_WIDTH  ),
+      .NumWords    ( ICACHE_NUM_WORDS   ),
+      .ByteWidth   ( 32'd8              ),
+      .NumPorts    ( 32'd1              ),
+      .Latency     ( 32'd1              ),
+      .SimInit     ( "none"             ),
+      .PrintSimCfg ( 1'b1               )
     ) data_sram (
       .clk_i     ( clk_i               ),
       .rst_ni    ( rst_ni              ),
