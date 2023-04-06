@@ -323,9 +323,14 @@ module cva6_shared_tlb_sv32 import ariane_pkg::*; #(
 
     for (genvar i = 0; i < SHARED_TLB_WAYS; i++) begin : gen_sram
         // Tag RAM
-        sram #(
-            .DATA_WIDTH ( $bits(shared_tag_t) ),
-            .NUM_WORDS  ( SHARED_TLB_DEPTH   )
+        tc_sram #(
+            .DataWidth   ( $bits(shared_tag_t) ),
+            .NumWords    ( SHARED_TLB_DEPTH    ),
+            .ByteWidth   ( 32'd8               ),
+            .NumPorts    ( 32'd1               ),
+            .Latency     ( 32'd1               ),
+            .SimInit     ( "none"              ),
+            .PrintSimCfg ( 1'b1                )
         ) tag_sram (
             .clk_i      ( clk_i           ),
             .rst_ni     ( rst_ni          ),
@@ -342,9 +347,14 @@ module cva6_shared_tlb_sv32 import ariane_pkg::*; #(
         assign shared_tag_rd[i] = shared_tag_t'(tag_rd_data[i]);
     
         // PTE RAM
-        sram #(
-            .DATA_WIDTH ( $bits(riscv::pte_sv32_t) ),
-            .NUM_WORDS  ( SHARED_TLB_DEPTH   )
+        tc_sram #(
+            .DataWidth   ( $bits(riscv::pte_sv32_t) ),
+            .NumWords    ( SHARED_TLB_DEPTH         ),
+            .ByteWidth   ( 32'd8                    ),
+            .NumPorts    ( 32'd1                    ),
+            .Latency     ( 32'd1                    ),
+            .SimInit     ( "none"                   ),
+            .PrintSimCfg ( 1'b1                     )
         ) pte_sram (
             .clk_i      ( clk_i           ),
             .rst_ni     ( rst_ni          ),
