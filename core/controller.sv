@@ -73,7 +73,14 @@ module controller import ariane_pkg::*; (
     assign rst_addr_o = rst_addr_q;
 
     // fence.t FSM
-    typedef enum logic[2:0] {IDLE, FLUSH_DCACHE, DRAIN_REQS, PAD, RST_UARCH} fence_t_state_e;
+    typedef enum logic [2:0] {
+        IDLE,
+        DRAIN_REQS_BEFORE,
+        FLUSH_DCACHE,
+        DRAIN_REQS_AFTER,
+        PAD,
+        RST_UARCH
+    } fence_t_state_e;
     fence_t_state_e fence_t_state_d, fence_t_state_q;
     logic [3:0]     rst_uarch_cnt_d, rst_uarch_cnt_q;
 
@@ -226,17 +233,24 @@ module controller import ariane_pkg::*; (
         unique case (fence_t_state_q)
             // Idle
             IDLE: begin
-                if (fence_t_i) fence_t_state_d = FLUSH_DCACHE;
+                if (fence_t_i) fence_t_state_d = DRAIN_REQS_BEFORE;
+            end
+
+            // Wait for all pending (external) transactions to complete,
+            // s.t. there are no inflight transactions that may alter cache state after flushing.
+            DRAIN_REQS_BEFORE: begin
+                // Wait until the cache was idle for 16 cycles.
+                if (drain_cnt == 4'hf) fence_t_state_d = FLUSH_DCACHE;
             end
 
             // Wait for dcache to acknowledge flush
             FLUSH_DCACHE: begin
-                if (flush_dcache_ack_i) fence_t_state_d = DRAIN_REQS;
+                if (flush_dcache_ack_i) fence_t_state_d = DRAIN_REQS_AFTER;
             end
 
             // Wait for all pending (external) transactions to complete,
             // s.t. we do not violate any handshake protocols.
-            DRAIN_REQS: begin
+            DRAIN_REQS_AFTER: begin
                 // The cache controls our only handshaked interface.
                 // Wait until it was idle for 16 cycles.
                 if (drain_cnt == 4'hf) begin
