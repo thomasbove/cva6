@@ -14,6 +14,7 @@
 //              Instantiates an AXI-Bus and memories
 
 `include "axi/assign.svh"
+`include "axi/typedef.svh"
 
 module ariane_testharness #(
   parameter int unsigned AXI_USER_WIDTH    = ariane_pkg::AXI_USER_WIDTH,
@@ -384,8 +385,27 @@ module ariane_testharness #(
 
 
   // ------------------------------
-  // Memory + Exclusive Access
+  // Memory + LLC + Exclusive Access
   // ------------------------------
+  ariane_axi_soc::req_slv_t   llc_req;
+  ariane_axi_soc::resp_slv_t  llc_resp;
+
+  `AXI_TYPEDEF_AW_CHAN_T( axi_slv_aw_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_AW_CHAN_T( axi_mst_aw_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_W_CHAN_T(  axi_w_t,        ariane_axi_soc::data_t,   ariane_axi_soc::strb_t,   ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_B_CHAN_T(  axi_slv_b_t,    ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_B_CHAN_T(  axi_mst_b_t,    ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_AR_CHAN_T( axi_slv_ar_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_AR_CHAN_T( axi_mst_ar_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_R_CHAN_T(  axi_slv_r_t,    ariane_axi_soc::data_t,   ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
+  `AXI_TYPEDEF_R_CHAN_T(  axi_mst_r_t,    ariane_axi_soc::data_t,   ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
+
+  `AXI_TYPEDEF_REQ_T(   axi_slv_req_t,  axi_slv_aw_t, axi_w_t,    axi_slv_ar_t)
+  `AXI_TYPEDEF_RESP_T(  axi_slv_resp_t, axi_slv_b_t,  axi_slv_r_t)
+  `AXI_TYPEDEF_REQ_T(   axi_mst_req_t,  axi_mst_aw_t, axi_w_t,    axi_mst_ar_t)
+  `AXI_TYPEDEF_RESP_T(  axi_mst_resp_t, axi_mst_b_t,  axi_mst_r_t)
+
+
   AXI_BUS #(
     .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
     .AXI_DATA_WIDTH ( AXI_DATA_WIDTH           ),
@@ -402,18 +422,238 @@ module ariane_testharness #(
   logic [AXI_USER_WIDTH-1:0]    wuser;
   logic [AXI_USER_WIDTH-1:0]    ruser;
 
-  axi_riscv_atomics_wrap #(
-    .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
-    .AXI_DATA_WIDTH ( AXI_DATA_WIDTH           ),
-    .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
-    .AXI_USER_WIDTH ( AXI_USER_WIDTH           ),
-    .AXI_MAX_WRITE_TXNS ( 1  ),
-    .RISCV_WORD_WIDTH   ( 64 )
+  // axi_riscv_atomics_wrap #(
+  //   .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
+  //   .AXI_DATA_WIDTH ( AXI_DATA_WIDTH           ),
+  //   .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
+  //   .AXI_USER_WIDTH ( AXI_USER_WIDTH           ),
+  //   .AXI_MAX_WRITE_TXNS ( 1  ),
+  //   .RISCV_WORD_WIDTH   ( 64 )
+  // ) i_axi_riscv_atomics (
+  //   .clk_i,
+  //   .rst_ni ( ndmreset_n               ),
+  //   .slv    ( master[ariane_soc::DRAM] ),
+  //   .mst    ( dram                     )
+  // );
+
+  axi_riscv_atomics #(
+    .AXI_ADDR_WIDTH    ( AXI_ADDRESS_WIDTH        ),
+    .AXI_DATA_WIDTH    ( AXI_DATA_WIDTH           ),
+    .AXI_ID_WIDTH      ( ariane_soc::IdWidthSlave ),
+    .AXI_USER_WIDTH    ( AXI_USER_WIDTH           ),
+    .AXI_MAX_WRITE_TXNS( 1                        ),
+    .RISCV_WORD_WIDTH  ( 64                       )
   ) i_axi_riscv_atomics (
-    .clk_i,
-    .rst_ni ( ndmreset_n               ),
-    .slv    ( master[ariane_soc::DRAM] ),
-    .mst    ( dram                     )
+    .clk_i           ( clk_i          ),
+    .rst_ni          ( ndmreset_n     ),
+    .slv_aw_id_i     ( dram.aw_id     ),
+    .slv_aw_addr_i   ( dram.aw_addr   ),
+    .slv_aw_prot_i   ( dram.aw_prot   ),
+    .slv_aw_region_i ( dram.aw_region ),
+    .slv_aw_atop_i   ( dram.aw_atop   ), // is there atop signal for dram?
+    .slv_aw_len_i    ( dram.aw_len    ),
+    .slv_aw_size_i   ( dram.aw_size   ),
+    .slv_aw_burst_i  ( dram.aw_burst  ),
+    .slv_aw_lock_i   ( dram.aw_lock   ),
+    .slv_aw_cache_i  ( dram.aw_cache  ),
+    .slv_aw_qos_i    ( dram.aw_qos    ),
+    .slv_aw_user_i   ( dram.aw_user   ),
+    .slv_aw_valid_i  ( dram.aw_valid  ),
+    .slv_aw_ready_o  ( dram.aw_ready  ),
+
+    .slv_ar_id_i     ( dram.ar_id     ),
+    .slv_ar_addr_i   ( dram.ar_addr   ),
+    .slv_ar_prot_i   ( dram.ar_prot   ),
+    .slv_ar_region_i ( dram.ar_region ),
+    .slv_ar_len_i    ( dram.ar_len    ),
+    .slv_ar_size_i   ( dram.ar_size   ),
+    .slv_ar_burst_i  ( dram.ar_burst  ),
+    .slv_ar_lock_i   ( dram.ar_lock   ),
+    .slv_ar_cache_i  ( dram.ar_cache  ),
+    .slv_ar_qos_i    ( dram.ar_qos    ),
+    .slv_ar_user_i   ( dram.ar_user   ),
+    .slv_ar_valid_i  ( dram.ar_valid  ),
+    .slv_ar_ready_o  ( dram.ar_ready  ),
+
+    .slv_w_data_i    ( dram.w_data    ),
+    .slv_w_strb_i    ( dram.w_strb    ),
+    .slv_w_user_i    ( dram.w_user    ),
+    .slv_w_last_i    ( dram.w_last    ),
+    .slv_w_valid_i   ( dram.w_valid   ),
+    .slv_w_ready_o   ( dram.w_ready   ),
+
+    .slv_r_id_o      ( dram.r_id      ),
+    .slv_r_data_o    ( dram.r_data    ),
+    .slv_r_resp_o    ( dram.r_resp    ),
+    .slv_r_last_o    ( dram.r_last    ),
+    .slv_r_user_o    ( dram.r_user    ),
+    .slv_r_valid_o   ( dram.r_valid   ),
+    .slv_r_ready_i   ( dram.r_ready   ),
+
+    .slv_b_id_o      ( dram.b_id      ),
+    .slv_b_resp_o    ( dram.b_resp    ),
+    .slv_b_user_o    ( dram.b_user    ),
+    .slv_b_valid_o   ( dram.b_valid   ),
+    .slv_b_ready_i   ( dram.b_ready   ),
+
+    .mst_aw_id_o     ( llc_req.aw.id     ),
+    .mst_aw_addr_o   ( llc_req.aw.addr   ),
+    .mst_aw_prot_o   ( llc_req.aw.prot   ),
+    .mst_aw_region_o ( llc_req.aw.region ),
+    .mst_aw_atop_o   ( llc_req.aw.atop   ),
+    .mst_aw_len_o    ( llc_req.aw.len    ),
+    .mst_aw_size_o   ( llc_req.aw.size   ),
+    .mst_aw_burst_o  ( llc_req.aw.burst  ),
+    .mst_aw_lock_o   ( llc_req.aw.lock   ),
+    .mst_aw_cache_o  ( llc_req.aw.cache  ),
+    .mst_aw_qos_o    ( llc_req.aw.qos    ),
+    .mst_aw_user_o   ( llc_req.aw.user   ),
+    .mst_aw_valid_o  ( llc_req.aw_valid  ),
+    .mst_aw_ready_i  ( llc_resp.aw_ready ),
+
+    .mst_ar_id_o     ( llc_req.ar.id     ),
+    .mst_ar_addr_o   ( llc_req.ar.addr   ),
+    .mst_ar_prot_o   ( llc_req.ar.prot   ),
+    .mst_ar_region_o ( llc_req.ar.region ),
+    .mst_ar_len_o    ( llc_req.ar.len    ),
+    .mst_ar_size_o   ( llc_req.ar.size   ),
+    .mst_ar_burst_o  ( llc_req.ar.burst  ),
+    .mst_ar_lock_o   ( llc_req.ar.lock   ),
+    .mst_ar_cache_o  ( llc_req.ar.cache  ),
+    .mst_ar_qos_o    ( llc_req.ar.qos    ),
+    .mst_ar_user_o   ( llc_req.ar.user   ),
+    .mst_ar_valid_o  ( llc_req.ar_valid  ),
+    .mst_ar_ready_i  ( llc_resp.ar_ready ),
+
+    .mst_w_data_o    ( llc_req.w.data    ),
+    .mst_w_strb_o    ( llc_req.w.strb    ),
+    .mst_w_last_o    ( llc_req.w.last    ),
+    .mst_w_user_o    ( llc_req.w.user    ),
+    .mst_w_valid_o   ( llc_req.w_valid   ),
+    .mst_w_ready_i   ( llc_resp.w_ready  ),
+
+    .mst_r_id_i      ( llc_resp.r.id     ),
+    .mst_r_data_i    ( llc_resp.r.data   ),
+    .mst_r_resp_i    ( llc_resp.r.resp   ),
+    .mst_r_last_i    ( llc_resp.r.last   ),
+    .mst_r_user_i    ( llc_resp.r.user   ),
+    .mst_r_valid_i   ( llc_resp.r_valid  ),
+    .mst_r_ready_o   ( llc_req.r_ready   ),
+
+    .mst_b_id_i      ( llc_resp.b.id     ),
+    .mst_b_resp_i    ( llc_resp.b.resp   ),
+    .mst_b_user_i    ( llc_resp.b.user   ),
+    .mst_b_valid_i   ( llc_resp.b_valid  ),
+    .mst_b_ready_o   ( llc_req.b_ready   )
+  );
+
+  // break down dram into request and respond signals
+  ariane_axi_soc::req_t   dram_req;
+  ariane_axi_soc::resp_t  dram_resp;
+  `AXI_ASSIGN_FROM_REQ(dram, dram_req)
+  `AXI_ASSIGN_TO_RESP(dram_resp, dram)
+
+  // wrap register interface as req/resp for llc and clic
+  localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
+  localparam int unsigned REG_BUS_DATA_WIDTH = 32;
+
+`define REG_BUS_TYPEDEF_REQ(req_t, addr_t, data_t, strb_t) \
+    typedef struct packed { \
+        addr_t addr; \
+        logic  write; \
+        data_t wdata; \
+        strb_t wstrb; \
+        logic  valid; \
+    } req_t;
+
+`define REG_BUS_TYPEDEF_RSP(rsp_t, data_t) \
+    typedef struct packed { \
+        data_t rdata; \
+        logic  error; \
+        logic  ready; \
+    } rsp_t;
+
+  typedef logic [REG_BUS_ADDR_WIDTH-1:0] addr_t;
+  typedef logic [REG_BUS_DATA_WIDTH-1:0] data_t;
+  typedef logic [REG_BUS_DATA_WIDTH/8-1:0] strb_t;
+
+  `REG_BUS_TYPEDEF_REQ(reg_a32_d32_req_t, addr_t, data_t, strb_t)
+  `REG_BUS_TYPEDEF_RSP(reg_a32_d32_rsp_t, data_t)
+
+
+  // config signals for llc
+  reg_a32_d32_req_t llc_conf_req;
+  reg_a32_d32_rsp_t llc_conf_rsp;
+
+  ariane_axi_soc::req_t   reg_conf_req;
+  ariane_axi_soc::resp_t  reg_conf_resp;
+
+  `AXI_ASSIGN_FROM_REQ(slave[ariane_soc::LLCCfg], reg_conf_req)
+  `AXI_ASSIGN_TO_RESP(reg_conf_resp, slave[ariane_soc::LLCCfg])
+
+  // axi2reg interface
+  axi_to_reg #(
+    .ADDR_WIDTH         ( REG_BUS_ADDR_WIDTH         ),
+    .DATA_WIDTH         ( REG_BUS_DATA_WIDTH         ),
+    .ID_WIDTH           ( ariane_soc::IdWidthSlave   ),
+    .USER_WIDTH         ( AXI_USER_WIDTH             ),
+    .AXI_MAX_WRITE_TXNS ( 32'd2                      ),
+    .AXI_MAX_READ_TXNS  ( 32'd2                      ),
+    .DECOUPLE_W         ( 1                          ),
+    .axi_req_t          ( ariane_axi_soc::req_slv_t  ),
+    .axi_rsp_t          ( ariane_axi_soc::resp_slv_t ),
+    .reg_req_t          ( reg_a32_d32_req_t          ),
+    .reg_rsp_t          ( reg_a32_d32_rsp_t          )
+  ) i_axi_to_reg (
+    .clk_i      ( clk_i           ),
+    .rst_ni     ( rst_ni          ),
+    .testmode_i ( test_en         ),
+    .axi_req_i  ( reg_conf_req    ),
+    .axi_rsp_o  ( reg_conf_resp   ),
+    .reg_req_o  ( reg_conf_req    ),
+    .reg_rsp_i  ( reg_conf_resp   )
+  );
+
+  assign llc_conf_req.addr  = reg_conf_req.aw.addr;
+  assign llc_conf_req.write = reg_conf_req.w.last;
+  assign llc_conf_req.wdata = reg_conf_req.w.data;
+  assign llc_conf_req.wstrb = reg_conf_req.w.strb;
+  assign llc_conf_req.valid = reg_conf_req.w_valid;
+
+  assign reg_bus.rdata = llc_conf_rsp.rdata;
+  assign reg_bus.error = llc_conf_rsp.error;
+  assign reg_bus.ready = llc_conf_rsp.ready;
+
+  axi_llc_reg_wrap #(
+    .SetAssociativity ( 8                               ),
+    .NumLines         ( 64                              ),
+    .NumBlocks        ( 8                               ),
+    .MaxThread        ( 64                              ),
+    .AxiIdWidth       ( ariane_soc::IdWidthSlave        ),
+    .AxiAddrWidth     ( AXI_ADDRESS_WIDTH               ),
+    .AxiDataWidth     ( AXI_DATA_WIDTH                  ),
+    .AxiUserWidth     ( AXI_USER_WIDTH                  ),
+    .slv_req_t        ( ariane_axi_soc::req_slv_t       ),
+    .slv_resp_t       ( ariane_axi_soc::resp_slv_t      ),
+    .mst_req_t        ( ariane_axi_soc::req_t           ),
+    .mst_resp_t       ( ariane_axi_soc::resp_t          ),
+    .reg_req_t        ( reg_a32_d32_req_t               ),
+    .reg_resp_t       ( reg_a32_d32_rsp_t               ),
+    .rule_full_t      ( axi_pkg::xbar_rule_64_t         )
+  ) i_axi_llc (
+    .clk_i               ( clk_i                                  ),
+    .rst_ni              ( ndmreset_n                             ),
+    .test_i              ( test_en                                ),
+    .slv_req_i           ( llc_req                                ),
+    .slv_resp_o          ( llc_resp                               ),
+    .mst_req_o           ( dram_req                               ),
+    .mst_resp_i          ( dram_resp                              ),
+    .conf_req_i          ( llc_conf_req                           ),
+    .conf_resp_o         ( llc_conf_rsp                           ),
+    .cached_start_addr_i ( ariane_soc::DRAMBase                           ),
+    .cached_end_addr_i   ( ariane_soc::DRAMBase  + ariane_soc::DRAMLength ),
+    .spm_start_addr_i    ( ariane_soc::LLCSpmBase                 ),
+    .axi_llc_events_o    (                                        )   // not use it currently
   );
 
   AXI_BUS #(
@@ -501,7 +741,9 @@ module ariane_testharness #(
     '{ idx: ariane_soc::Ethernet, start_addr: ariane_soc::EthernetBase, end_addr: ariane_soc::EthernetBase + ariane_soc::EthernetLength },
     '{ idx: ariane_soc::GPIO,     start_addr: ariane_soc::GPIOBase,     end_addr: ariane_soc::GPIOBase + ariane_soc::GPIOLength         },
     '{ idx: ariane_soc::DRAM,     start_addr: ariane_soc::DRAMBase,     end_addr: ariane_soc::DRAMBase + ariane_soc::DRAMLength         },
-    '{ idx: ariane_soc::CLIC,     start_addr: ariane_soc::CLICBase,     end_addr: ariane_soc::CLICBase + ariane_soc::CLICLength         }
+    '{ idx: ariane_soc::CLIC,     start_addr: ariane_soc::CLICBase,     end_addr: ariane_soc::CLICBase + ariane_soc::CLICLength         },
+    '{ idx: ariane_soc::LLCSpm,   start_addr: ariane_soc::LLCSpmBase,   end_addr: ariane_soc::LLCSpmBase + ariane_soc::LLCSpmLength     },
+    '{ idx: ariane_soc::LLCCfg,   start_addr: ariane_soc::LLCCfgBase,   end_addr: ariane_soc::LLCCfgBase + ariane_soc::LLCCfgLength     }
   };
 
   localparam axi_pkg::xbar_cfg_t AXI_XBAR_CFG = '{
@@ -773,32 +1015,32 @@ module ariane_testharness #(
       .reg_o     ( reg_bus      )
   );
 
-  // wrap register interface as req/resp for clic
-  localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
-  localparam int unsigned REG_BUS_DATA_WIDTH = 32;
+//   // wrap register interface as req/resp for clic
+//   localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
+//   localparam int unsigned REG_BUS_DATA_WIDTH = 32;
 
-`define REG_BUS_TYPEDEF_REQ(req_t, addr_t, data_t, strb_t) \
-    typedef struct packed { \
-        addr_t addr; \
-        logic  write; \
-        data_t wdata; \
-        strb_t wstrb; \
-        logic  valid; \
-    } req_t;
+// `define REG_BUS_TYPEDEF_REQ(req_t, addr_t, data_t, strb_t) \
+//     typedef struct packed { \
+//         addr_t addr; \
+//         logic  write; \
+//         data_t wdata; \
+//         strb_t wstrb; \
+//         logic  valid; \
+//     } req_t;
 
-`define REG_BUS_TYPEDEF_RSP(rsp_t, data_t) \
-    typedef struct packed { \
-        data_t rdata; \
-        logic  error; \
-        logic  ready; \
-    } rsp_t;
+// `define REG_BUS_TYPEDEF_RSP(rsp_t, data_t) \
+//     typedef struct packed { \
+//         data_t rdata; \
+//         logic  error; \
+//         logic  ready; \
+//     } rsp_t;
 
-  typedef logic [REG_BUS_ADDR_WIDTH-1:0] addr_t;
-  typedef logic [REG_BUS_DATA_WIDTH-1:0] data_t;
-  typedef logic [REG_BUS_DATA_WIDTH/8-1:0] strb_t;
+//   typedef logic [REG_BUS_ADDR_WIDTH-1:0] addr_t;
+//   typedef logic [REG_BUS_DATA_WIDTH-1:0] data_t;
+//   typedef logic [REG_BUS_DATA_WIDTH/8-1:0] strb_t;
 
-  `REG_BUS_TYPEDEF_REQ(reg_a32_d32_req_t, addr_t, data_t, strb_t)
-  `REG_BUS_TYPEDEF_RSP(reg_a32_d32_rsp_t, data_t)
+//   `REG_BUS_TYPEDEF_REQ(reg_a32_d32_req_t, addr_t, data_t, strb_t)
+//   `REG_BUS_TYPEDEF_RSP(reg_a32_d32_rsp_t, data_t)
 
   reg_a32_d32_req_t clic_req;
   reg_a32_d32_rsp_t clic_rsp;

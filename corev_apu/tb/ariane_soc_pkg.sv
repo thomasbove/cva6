@@ -38,7 +38,9 @@ package ariane_soc;
     PLIC     = 7,
     CLINT    = 8,
     ROM      = 9,
-    Debug    = 10
+    LLCSpm   = 10,
+    LLCCfg   = 11,
+    Debug    = 12
   } axi_slaves_t;
 
   localparam NB_PERIPHERALS = Debug + 1;
@@ -56,6 +58,8 @@ package ariane_soc;
   localparam logic[63:0] DRAMLength     = 64'h40000000; // 1GByte of DDR (split between two chips on Genesys2)
   localparam logic[63:0] SRAMLength     = 64'h1800000;  // 24 MByte of SRAM
   localparam logic[63:0] CLICLength     = 64'h3FF_FFFF;
+  localparam logic[63:0] LLCSpmLength   = 64'h0020_0000;
+  localparam logic[63:0] LLCCfgLength   = 64'h0000_1000;
   // Instantiate AXI protocol checkers
   localparam bit GenProtocolChecker = 1'b0;
 
@@ -70,7 +74,9 @@ package ariane_soc;
     EthernetBase = 64'h3000_0000,
     GPIOBase     = 64'h4000_0000,
     DRAMBase     = 64'h8000_0000,
-    CLICBase     = 64'h5000_0000
+    CLICBase     = 64'h5000_0000,
+    LLCSpmBase   = 64'h6000_0000,
+    LLCCfgBase   = 64'h7000_0000
   } soc_bus_start_t;
 
   localparam NrRegion = 1;

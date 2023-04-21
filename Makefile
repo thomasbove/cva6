@@ -176,14 +176,21 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         corev_apu/riscv-dbg/src/dm_top.sv                                            \
         corev_apu/riscv-dbg/debug_rom/debug_rom.sv                                   \
         corev_apu/register_interface/src/apb_to_reg.sv                               \
+        corev_apu/register_interface/src/axi_to_reg.sv                               \
+        corev_apu/register_interface/src/axi_lite_to_reg.sv                          \
         vendor/pulp-platform/axi/src/axi_multicut.sv                                            \
         vendor/pulp-platform/common_cells/src/rstgen_bypass.sv                          \
         vendor/pulp-platform/common_cells/src/rstgen.sv                                 \
         vendor/pulp-platform/common_cells/src/stream_mux.sv                             \
         vendor/pulp-platform/common_cells/src/stream_demux.sv                           \
+        vendor/pulp-platform/common_cells/src/stream_fifo.sv                           \
+        vendor/pulp-platform/common_cells/src/stream_xbar.sv                           \
         vendor/pulp-platform/common_cells/src/exp_backoff.sv                            \
         vendor/pulp-platform/common_cells/src/addr_decode.sv                            \
         vendor/pulp-platform/common_cells/src/stream_register.sv                        \
+        vendor/pulp-platform/common_cells/src/sub_per_hash.sv                           \
+        vendor/pulp-platform/common_cells/src/onehot_to_bin.sv                          \
+        vendor/pulp-platform/common_cells/src/id_queue.sv                               \
         vendor/pulp-platform/axi/src/axi_cut.sv                                                 \
         vendor/pulp-platform/axi/src/axi_join.sv                                                \
         vendor/pulp-platform/axi/src/axi_delayer.sv                                             \
@@ -194,6 +201,8 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         vendor/pulp-platform/axi/src/axi_mux.sv                                                 \
         vendor/pulp-platform/axi/src/axi_demux.sv                                               \
         vendor/pulp-platform/axi/src/axi_xbar.sv                                                \
+        vendor/pulp-platform/axi/src/axi_burst_splitter.sv                                      \
+        vendor/pulp-platform/axi/src/axi_isolate.sv                                      \
         vendor/pulp-platform/common_cells/src/cdc_2phase.sv                             \
         vendor/pulp-platform/common_cells/src/spill_register_flushable.sv               \
         vendor/pulp-platform/common_cells/src/spill_register.sv                         \
@@ -203,6 +212,8 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         vendor/pulp-platform/common_cells/src/deprecated/fifo_v2.sv                     \
         vendor/pulp-platform/common_cells/src/stream_delay.sv                           \
         vendor/pulp-platform/common_cells/src/lfsr_16bit.sv                             \
+        vendor/pulp-platform/common_cells/src/cb_filter_pkg.sv                          \
+        vendor/pulp-platform/common_cells/src/cb_filter.sv                              \
         vendor/pulp-platform/tech_cells_generic/src/deprecated/cluster_clk_cells.sv         \
         vendor/pulp-platform/tech_cells_generic/src/deprecated/pulp_clk_cells.sv            \
         vendor/pulp-platform/tech_cells_generic/src/rtl/tc_clk.sv                           \
@@ -211,7 +222,31 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         corev_apu/tb/rvfi_tracer.sv                                                  \
         corev_apu/tb/common/uart.sv                                                  \
         corev_apu/tb/common/SimDTM.sv                                                \
-        corev_apu/tb/common/SimJTAG.sv
+        corev_apu/tb/common/SimJTAG.sv                                               \
+        corev_apu/axi_llc/src/axi_llc_pkg.sv                                         \
+        corev_apu/axi_llc/src/axi_llc_reg_pkg.sv                                     \
+        corev_apu/axi_llc/src/axi_llc_burst_cutter.sv                                \
+        corev_apu/axi_llc/src/axi_llc_evict_unit.sv                                  \
+        corev_apu/axi_llc/src/axi_llc_top.sv                                         \
+        corev_apu/axi_llc/src/axi_llc_chan_splitter.sv                               \
+        corev_apu/axi_llc/src/axi_llc_config.sv                                      \
+        corev_apu/axi_llc/src/axi_llc_hit_miss.sv                                    \
+        corev_apu/axi_llc/src/axi_llc_read_unit.sv                                   \
+        corev_apu/axi_llc/src/axi_llc_reg_top.sv                                     \
+        corev_apu/axi_llc/src/axi_llc_ways.sv                                        \
+        corev_apu/axi_llc/src/axi_llc_data_way.sv                                    \
+        corev_apu/axi_llc/src/axi_llc_merge_unit.sv                                  \
+        corev_apu/axi_llc/src/axi_llc_refill_unit.sv                                 \
+        corev_apu/axi_llc/src/axi_llc_reg_wrap.sv                                    \
+        corev_apu/axi_llc/src/axi_llc_write_unit.sv                                  \
+        corev_apu/axi_llc/src/eviction_refill/axi_llc_ax_master.sv                   \
+        corev_apu/axi_llc/src/eviction_refill/axi_llc_r_master.sv                    \
+        corev_apu/axi_llc/src/eviction_refill/axi_llc_w_master.sv                    \
+        corev_apu/axi_llc/src/hit_miss_detect/axi_llc_evict_box.sv                   \
+        corev_apu/axi_llc/src/hit_miss_detect/axi_llc_lock_box_bloom.sv              \
+        corev_apu/axi_llc/src/hit_miss_detect/axi_llc_miss_counters.sv               \
+        corev_apu/axi_llc/src/hit_miss_detect/axi_llc_tag_pattern_gen.sv             \
+        corev_apu/axi_llc/src/hit_miss_detect/axi_llc_tag_store.sv
 
 flists := ${CVA6_REPO_DIR}/core/Flist.cva6
 # SV32 MMU for CV32, SV39 MMU for CV64
@@ -255,7 +290,7 @@ riscv-clic-tests          := $(shell xargs printf '\n%s' < $(riscv-clic-tests-li
 riscv-benchmarks          := $(shell xargs printf '\n%s' < $(riscv-benchmarks-list) | cut -b 1-)
 
 # Search here for include files (e.g.: non-standalone components)
-incdir := vendor/pulp-platform/common_cells/include/ vendor/pulp-platform/axi/include/ corev_apu/register_interface/include/
+incdir := vendor/pulp-platform/common_cells/include/ vendor/pulp-platform/axi/include/ corev_apu/register_interface/include/ corev_apu/axi_llc/include/
 
 # Compile and sim flags
 compile_flag     += +cover=bcfst+/dut -incr -64 -nologo -quiet -suppress 13262 -permissive +define+$(defines)
