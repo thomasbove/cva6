@@ -217,12 +217,14 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         vendor/pulp-platform/tech_cells_generic/src/deprecated/cluster_clk_cells.sv         \
         vendor/pulp-platform/tech_cells_generic/src/deprecated/pulp_clk_cells.sv            \
         vendor/pulp-platform/tech_cells_generic/src/rtl/tc_clk.sv                           \
+        corev_apu/tb/common/SimDTM.sv                                                \
+        corev_apu/tb/common/SimJTAG.sv                                               \
         corev_apu/tb/ariane_testharness.sv                                           \
         corev_apu/tb/ariane_peripherals.sv                                           \
         corev_apu/tb/rvfi_tracer.sv                                                  \
         corev_apu/tb/common/uart.sv                                                  \
-        corev_apu/tb/common/SimDTM.sv                                                \
-        corev_apu/tb/common/SimJTAG.sv                                               \
+        corev_apu/axi_llc/src/axi_llc_sram_data.sv                                   \
+        corev_apu/axi_llc/src/axi_llc_sram_tag.sv                                    \
         corev_apu/axi_llc/src/axi_llc_pkg.sv                                         \
         corev_apu/axi_llc/src/axi_llc_reg_pkg.sv                                     \
         corev_apu/axi_llc/src/axi_llc_burst_cutter.sv                                \
@@ -247,7 +249,7 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         corev_apu/axi_llc/src/hit_miss_detect/axi_llc_miss_counters.sv               \
         corev_apu/axi_llc/src/hit_miss_detect/axi_llc_tag_pattern_gen.sv             \
         corev_apu/axi_llc/src/hit_miss_detect/axi_llc_tag_store.sv
-
+       
 flists := ${CVA6_REPO_DIR}/core/Flist.cva6
 # SV32 MMU for CV32, SV39 MMU for CV64
 ifeq ($(findstring 32, $(target)),32)
@@ -293,7 +295,7 @@ riscv-benchmarks          := $(shell xargs printf '\n%s' < $(riscv-benchmarks-li
 incdir := vendor/pulp-platform/common_cells/include/ vendor/pulp-platform/axi/include/ corev_apu/register_interface/include/ corev_apu/axi_llc/include/
 
 # Compile and sim flags
-compile_flag     += +cover=bcfst+/dut -incr -64 -nologo -quiet -suppress 13262 -permissive +define+$(defines)
+compile_flag     += +cover=bcfst+/dut -incr -64 -nologo -quiet -suppress 13262 -svinputport=compat -permissive +define+$(defines)
 uvm-flags        += +UVM_NO_RELNOTES +UVM_VERBOSITY=LOW
 questa-flags     += -t 1ns -64 -coverage -classdebug $(gui-sim) $(QUESTASIM_FLAGS)
 compile_flag_vhd += -64 -nologo -quiet -2008

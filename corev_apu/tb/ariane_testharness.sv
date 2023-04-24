@@ -588,8 +588,9 @@ module ariane_testharness #(
   ariane_axi_soc::req_t   reg_conf_req;
   ariane_axi_soc::resp_t  reg_conf_resp;
 
-  `AXI_ASSIGN_FROM_REQ(slave[ariane_soc::LLCCfg], reg_conf_req)
-  `AXI_ASSIGN_TO_RESP(reg_conf_resp, slave[ariane_soc::LLCCfg])
+  // TODO: Cannot find slave[LLCCfg], use master?
+  `AXI_ASSIGN_FROM_REQ(master[ariane_soc::LLCCfg], reg_conf_req)
+  `AXI_ASSIGN_TO_RESP(reg_conf_resp, master[ariane_soc::LLCCfg])
 
   // axi2reg interface
   axi_to_reg #(
@@ -624,11 +625,12 @@ module ariane_testharness #(
   assign reg_bus.error = llc_conf_rsp.error;
   assign reg_bus.ready = llc_conf_rsp.ready;
 
+  // TODO: ID++ ?
   axi_llc_reg_wrap #(
     .SetAssociativity ( 8                               ),
-    .NumLines         ( 64                              ),
+    .NumLines         ( 256                             ),
     .NumBlocks        ( 8                               ),
-    .MaxThread        ( 64                              ),
+    .MaxThread        ( 256                             ),
     .AxiIdWidth       ( ariane_soc::IdWidthSlave        ),
     .AxiAddrWidth     ( AXI_ADDRESS_WIDTH               ),
     .AxiDataWidth     ( AXI_DATA_WIDTH                  ),
@@ -663,6 +665,7 @@ module ariane_testharness #(
     .AXI_USER_WIDTH ( AXI_USER_WIDTH           )
   ) dram_delayed();
 
+  // need change to LLC delay, using old version axi_delayer?
   axi_delayer_intf #(
     .AXI_ID_WIDTH        ( ariane_soc::IdWidthSlave ),
     .AXI_ADDR_WIDTH      ( AXI_ADDRESS_WIDTH        ),
@@ -730,6 +733,7 @@ module ariane_testharness #(
 
   axi_pkg::xbar_rule_64_t [ariane_soc::NB_PERIPHERALS-1:0] addr_map;
 
+  // TODO: idx of SPM being DRAM? (from old LLC)
   assign addr_map = '{
     '{ idx: ariane_soc::Debug,    start_addr: ariane_soc::DebugBase,    end_addr: ariane_soc::DebugBase + ariane_soc::DebugLength       },
     '{ idx: ariane_soc::ROM,      start_addr: ariane_soc::ROMBase,      end_addr: ariane_soc::ROMBase + ariane_soc::ROMLength           },
@@ -746,6 +750,7 @@ module ariane_testharness #(
     '{ idx: ariane_soc::LLCCfg,   start_addr: ariane_soc::LLCCfgBase,   end_addr: ariane_soc::LLCCfgBase + ariane_soc::LLCCfgLength     }
   };
 
+  // TODO: NB_PREIPH ++, UsedSlvPorts -- ?
   localparam axi_pkg::xbar_cfg_t AXI_XBAR_CFG = '{
     NoSlvPorts: ariane_soc::NrSlaves,
     NoMstPorts: ariane_soc::NB_PERIPHERALS,
