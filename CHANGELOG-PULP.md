@@ -4,6 +4,11 @@ All notable changes to the `pulp` branch of this project will be documented in t
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## pulp-v0.2.2 - 2023-04-27
+### Fixed
+- `Bender.yml`: Specify version for tech_cells_generic
+- `Makefile`: Fix vopt for recent questasim versions
+
 ## pulp-v0.2.1 - 2023-04-17
 ### Fixed
 - `Bender.yml`: Add cv64a6_imafdcsclic_sv39 target
