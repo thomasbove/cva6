@@ -211,7 +211,7 @@ package ariane_pkg;
     localparam bit XF16VEC    = XF16    & XFVEC & FLEN>16; // FP16 vectors available if vectors and larger fmt enabled
     localparam bit XF16ALTVEC = XF16ALT & XFVEC & FLEN>16; // FP16ALT vectors available if vectors and larger fmt enabled
     localparam bit XF8VEC     = XF8     & XFVEC & FLEN>8;  // FP8 vectors available if vectors and larger fmt enabled
-    localparam bit XF8ALTVEC  = XF8ALT     & XFVEC & FLEN>8;  // FP8 vectors available if vectors and larger fmt enabled
+    localparam bit XF8ALTVEC  = XF8ALT  & XFVEC & FLEN>8;  // FP8 vectors available if vectors and larger fmt enabled
     // ^^^^ until here ^^^^
     // ---------------------
 
