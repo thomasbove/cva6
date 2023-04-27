@@ -9,6 +9,6 @@
   upstream:
   {
     url: https://github.com/pulp-platform/fpu_div_sqrt_mvp.git
-    rev: 83a601f97934ed5e06d737b9c80d98b08867c5fa
+    rev: 86e1f558b3c95e91577c41b2fc452c86b04e85ac
   }
 }

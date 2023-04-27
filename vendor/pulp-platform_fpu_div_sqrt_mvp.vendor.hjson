@@ -15,7 +15,7 @@
         // URL
         url: "https://github.com/pulp-platform/fpu_div_sqrt_mvp.git",
         // revision
-        rev: "v1.0.3",
+        rev: "v1.0.4",
     }
 
     //Patch dir for local changes
@@ -29,4 +29,5 @@
         "src_files.yml",
     ]
 }
+
 

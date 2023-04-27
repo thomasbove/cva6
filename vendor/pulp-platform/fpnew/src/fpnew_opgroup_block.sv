@@ -8,6 +8,8 @@
 // this License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: SHL-0.51
 
 // Author: Stefan Mach <smach@iis.ee.ethz.ch>
 
@@ -16,18 +18,24 @@ module fpnew_opgroup_block #(
   // FPU configuration
   parameter int unsigned                Width         = 32,
   parameter logic                       EnableVectors = 1'b1,
+  parameter logic                       PulpDivsqrt   = 1'b1,
+  parameter logic                       EnableRSR     = 1'b1,
   parameter fpnew_pkg::fmt_logic_t      FpFmtMask     = '1,
   parameter fpnew_pkg::ifmt_logic_t     IntFmtMask    = '1,
   parameter fpnew_pkg::fmt_unsigned_t   FmtPipeRegs   = '{default: 0},
   parameter fpnew_pkg::fmt_unit_types_t FmtUnitTypes  = '{default: fpnew_pkg::PARALLEL},
   parameter fpnew_pkg::pipe_config_t    PipeConfig    = fpnew_pkg::BEFORE,
   parameter type                        TagType       = logic,
+  parameter int unsigned                TrueSIMDClass = 0,
   // Do not change
   localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS,
-  localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup)
+  localparam int unsigned NUM_OPERANDS = fpnew_pkg::num_operands(OpGroup),
+  localparam int unsigned NUM_LANES    = fpnew_pkg::max_num_lanes(Width, FpFmtMask, EnableVectors),
+  localparam type         MaskType     = logic [NUM_LANES-1:0]
 ) (
   input logic                                     clk_i,
   input logic                                     rst_ni,
+  input logic [31:0]                              hart_id_i,
   // Input signals
   input logic [NUM_OPERANDS-1:0][Width-1:0]       operands_i,
   input logic [NUM_FORMATS-1:0][NUM_OPERANDS-1:0] is_boxed_i,
@@ -39,6 +47,7 @@ module fpnew_opgroup_block #(
   input fpnew_pkg::int_format_e                   int_fmt_i,
   input logic                                     vectorial_op_i,
   input TagType                                   tag_i,
+  input MaskType                                  simd_mask_i,
   // Input Handshake
   input  logic                                    in_valid_i,
   output logic                                    in_ready_o,
@@ -90,6 +99,11 @@ module fpnew_opgroup_block #(
 
       assign in_valid = in_valid_i & (dst_fmt_i == fmt); // enable selected format
 
+      // Forward masks related to the right SIMD lane
+      localparam int unsigned INTERNAL_LANES = fpnew_pkg::num_lanes(Width, fpnew_pkg::fp_format_e'(fmt), EnableVectors);
+      logic [INTERNAL_LANES-1:0] mask_slice;
+      always_comb for (int b = 0; b < INTERNAL_LANES; b++) mask_slice[b] = simd_mask_i[(NUM_LANES/INTERNAL_LANES)*b];
+
       fpnew_opgroup_fmt_slice #(
         .OpGroup       ( OpGroup                      ),
         .FpFormat      ( fpnew_pkg::fp_format_e'(fmt) ),
@@ -97,7 +111,8 @@ module fpnew_opgroup_block #(
         .EnableVectors ( EnableVectors                ),
         .NumPipeRegs   ( FmtPipeRegs[fmt]             ),
         .PipeConfig    ( PipeConfig                   ),
-        .TagType       ( TagType                      )
+        .TagType       ( TagType                      ),
+        .TrueSIMDClass ( TrueSIMDClass                )
       ) i_fmt_slice (
         .clk_i,
         .rst_ni,
@@ -108,6 +123,7 @@ module fpnew_opgroup_block #(
         .op_mod_i,
         .vectorial_op_i,
         .tag_i,
+        .simd_mask_i    ( mask_slice               ),
         .in_valid_i     ( in_valid                 ),
         .in_ready_o     ( fmt_in_ready[fmt]        ),
         .flush_i,
@@ -122,9 +138,9 @@ module fpnew_opgroup_block #(
     // If the format wants to use merged ops, tie off the dangling ones not used here
     end else if (FpFmtMask[fmt] && ANY_MERGED && !IS_FIRST_MERGED) begin : merged_unused
 
+      localparam FMT = fpnew_pkg::get_first_enabled_multi(FmtUnitTypes, FpFmtMask);
       // Ready is split up into formats
-      assign fmt_in_ready[fmt]  = fmt_in_ready[fpnew_pkg::get_first_enabled_multi(FmtUnitTypes,
-                                                                                  FpFmtMask)];
+      assign fmt_in_ready[fmt]  = fmt_in_ready[int'(FMT)];
 
       assign fmt_out_valid[fmt] = 1'b0; // don't emit values
       assign fmt_busy[fmt]      = 1'b0; // never busy
@@ -164,13 +180,16 @@ module fpnew_opgroup_block #(
       .Width         ( Width            ),
       .FpFmtConfig   ( FpFmtMask        ),
       .IntFmtConfig  ( IntFmtMask       ),
+      .EnableRSR     ( EnableRSR        ),
       .EnableVectors ( EnableVectors    ),
+      .PulpDivsqrt   ( PulpDivsqrt      ),
       .NumPipeRegs   ( REG              ),
       .PipeConfig    ( PipeConfig       ),
       .TagType       ( TagType          )
     ) i_multifmt_slice (
       .clk_i,
       .rst_ni,
+      .hart_id_i,
       .operands_i,
       .is_boxed_i,
       .rnd_mode_i,
@@ -181,6 +200,7 @@ module fpnew_opgroup_block #(
       .int_fmt_i,
       .vectorial_op_i,
       .tag_i,
+      .simd_mask_i     ( simd_mask_i              ),
       .in_valid_i      ( in_valid                 ),
       .in_ready_o      ( fmt_in_ready[FMT]        ),
       .flush_i,
