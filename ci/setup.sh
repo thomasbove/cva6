@@ -22,3 +22,4 @@ fi
 tar -x -f $RISCV64_UNKNOWN_ELF_GCC --strip-components=1 -C $RISCV
 ci/install-fesvr.sh
 ci/build-riscv-tests.sh
+ci/build-riscv-hyp-tests.sh
