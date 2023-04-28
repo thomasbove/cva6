@@ -9,6 +9,6 @@
   upstream:
   {
     url: https://github.com/pulp-platform/cvfpu.git
-    rev: bc391de3900b2bc003037cc848f8967e9e52d93f
+    rev: e25daad4b6f92d6b18312028824e3dec79a40d5a
   }
 }

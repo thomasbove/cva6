@@ -71,6 +71,14 @@ Set PulpDivsqrt to 1 not to use the PULP DivSqrt unit \
 or set Features.FpFmtMask to support only FP32");
   end
 
+  if ((OpGroup == fpnew_pkg::DOTP) &&
+      !(FpFmtConfig[0] && (FpFmtConfig[2] || FpFmtConfig[4]) && (FpFmtConfig[3] || FpFmtConfig[5]))) begin
+    $fatal(1, "SDOTP only supported on 32b and 64b CVFPU instances in which at \
+least one 16b and one 8b format are supported. \
+The SDOTP operations compute on 8b inputs producing 16b outputs \
+or on 16b inputs producing 32b outputs");
+  end
+
   localparam int unsigned MAX_FP_WIDTH   = fpnew_pkg::max_fp_width(FpFmtConfig);
   localparam int unsigned MAX_INT_WIDTH  = fpnew_pkg::max_int_width(IntFmtConfig);
   localparam int unsigned NUM_LANES = fpnew_pkg::max_num_lanes(Width, FpFmtConfig, 1'b1);
@@ -199,7 +207,8 @@ or set Features.FpFmtMask to support only FP32");
       fpnew_pkg::status_t                      op_status;
 
       logic lane_is_used;
-      assign lane_is_used = (ACTIVE_FORMATS[src_fmt_i] & ~is_up_cast) | (ACTIVE_FORMATS[dst_fmt_i] & is_up_cast);
+      assign lane_is_used = (ACTIVE_FORMATS[src_fmt_i] & ~is_up_cast) |
+                            (ACTIVE_FORMATS[dst_fmt_i] &  is_up_cast) | (OpGroup == fpnew_pkg::DIVSQRT);
       assign in_valid = in_valid_i & ((lane == 0) | vectorial_op) & lane_is_used; // upper lanes only for vectors
 
       // Slice out the operands for this lane, upper bits are ignored in the unit
@@ -306,7 +315,7 @@ or set Features.FpFmtMask to support only FP32");
           .busy_o          ( lane_busy[lane]     )
         );
       end else if (OpGroup == fpnew_pkg::DIVSQRT) begin : lane_instance
-        if (!PulpDivsqrt && LANE_FORMATS[0] && (LANE_FORMATS[1:fpnew_pkg::NUM_FP_FORMATS-1] == '0)) begin
+        if (!PulpDivsqrt && LANE_FORMATS[0] && (LANE_FORMATS[1:fpnew_pkg::NUM_FP_FORMATS-1] == '0)) begin : gen_th_32_divsqrt
           // The T-head-based DivSqrt unit is supported only in FP32-only configurations
           fpnew_divsqrt_th_32 #(
             .NumPipeRegs ( NumPipeRegs          ),
@@ -336,7 +345,7 @@ or set Features.FpFmtMask to support only FP32");
             .out_ready_i     ( out_ready           ),
             .busy_o          ( lane_busy[lane]     )
           );
-        end else begin
+        end else begin : gen_pulp_divsqrt
           fpnew_divsqrt_multi #(
             .FpFmtConfig ( LANE_FORMATS         ),
             .NumPipeRegs ( NumPipeRegs          ),
