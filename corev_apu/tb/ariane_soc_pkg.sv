@@ -38,9 +38,8 @@ package ariane_soc;
     PLIC     = 7,
     CLINT    = 8,
     ROM      = 9,
-    LLCSpm   = 10,
-    LLCCfg   = 11,
-    Debug    = 12
+    LLCCfg   = 10,
+    Debug    = 11
   } axi_slaves_t;
 
   localparam NB_PERIPHERALS = Debug + 1;
@@ -79,8 +78,8 @@ package ariane_soc;
     LLCCfgBase   = 64'h7000_0000
   } soc_bus_start_t;
 
-  localparam NrRegion = 1;
-  localparam logic [NrRegion-1:0][NB_PERIPHERALS-1:0] ValidRule = {{NrRegion * NB_PERIPHERALS}{1'b1}};
+  // localparam NrRegion = 1;
+  // localparam logic [NrRegion-1:0][NB_PERIPHERALS-1:0] ValidRule = {{NrRegion * NB_PERIPHERALS}{1'b1}};
 
   localparam ariane_pkg::ariane_cfg_t ArianeSocCfg = '{
     RASDepth: cva6_config_pkg::CVA6ConfigRASDepth,

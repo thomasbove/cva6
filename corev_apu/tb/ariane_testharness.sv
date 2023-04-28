@@ -387,24 +387,6 @@ module ariane_testharness #(
   // ------------------------------
   // Memory + LLC + Exclusive Access
   // ------------------------------
-  ariane_axi_soc::req_slv_t   llc_req;
-  ariane_axi_soc::resp_slv_t  llc_resp;
-
-  `AXI_TYPEDEF_AW_CHAN_T( axi_slv_aw_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_AW_CHAN_T( axi_mst_aw_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_W_CHAN_T(  axi_w_t,        ariane_axi_soc::data_t,   ariane_axi_soc::strb_t,   ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_B_CHAN_T(  axi_slv_b_t,    ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_B_CHAN_T(  axi_mst_b_t,    ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_AR_CHAN_T( axi_slv_ar_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_AR_CHAN_T( axi_mst_ar_t,   ariane_axi_soc::addr_t,   ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_R_CHAN_T(  axi_slv_r_t,    ariane_axi_soc::data_t,   ariane_axi_soc::id_slv_t, ariane_axi_soc::user_t)
-  `AXI_TYPEDEF_R_CHAN_T(  axi_mst_r_t,    ariane_axi_soc::data_t,   ariane_axi_soc::id_t,     ariane_axi_soc::user_t)
-
-  `AXI_TYPEDEF_REQ_T(   axi_slv_req_t,  axi_slv_aw_t, axi_w_t,    axi_slv_ar_t)
-  `AXI_TYPEDEF_RESP_T(  axi_slv_resp_t, axi_slv_b_t,  axi_slv_r_t)
-  `AXI_TYPEDEF_REQ_T(   axi_mst_req_t,  axi_mst_aw_t, axi_w_t,    axi_mst_ar_t)
-  `AXI_TYPEDEF_RESP_T(  axi_mst_resp_t, axi_mst_b_t,  axi_mst_r_t)
-
 
   AXI_BUS #(
     .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
@@ -412,6 +394,12 @@ module ariane_testharness #(
     .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
     .AXI_USER_WIDTH ( AXI_USER_WIDTH           )
   ) dram();
+
+  // AXI bus to xbar for dram 
+  ariane_axi_soc::req_slv_t     mst_dram_req;
+  ariane_axi_soc::resp_slv_t    mst_dram_rsp;
+  ariane_axi_soc::req_slv_t     llc_req;
+  ariane_axi_soc::resp_slv_t    llc_resp;
 
   logic                         req;
   logic                         we;
@@ -422,19 +410,8 @@ module ariane_testharness #(
   logic [AXI_USER_WIDTH-1:0]    wuser;
   logic [AXI_USER_WIDTH-1:0]    ruser;
 
-  // axi_riscv_atomics_wrap #(
-  //   .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
-  //   .AXI_DATA_WIDTH ( AXI_DATA_WIDTH           ),
-  //   .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
-  //   .AXI_USER_WIDTH ( AXI_USER_WIDTH           ),
-  //   .AXI_MAX_WRITE_TXNS ( 1  ),
-  //   .RISCV_WORD_WIDTH   ( 64 )
-  // ) i_axi_riscv_atomics (
-  //   .clk_i,
-  //   .rst_ni ( ndmreset_n               ),
-  //   .slv    ( master[ariane_soc::DRAM] ),
-  //   .mst    ( dram                     )
-  // );
+  `AXI_ASSIGN_TO_REQ(mst_dram_req, master[ariane_soc::DRAM])
+  `AXI_ASSIGN_FROM_RESP(master[ariane_soc::DRAM], mst_dram_rsp)
 
   axi_riscv_atomics #(
     .AXI_ADDR_WIDTH    ( AXI_ADDRESS_WIDTH        ),
@@ -446,55 +423,55 @@ module ariane_testharness #(
   ) i_axi_riscv_atomics (
     .clk_i           ( clk_i          ),
     .rst_ni          ( ndmreset_n     ),
-    .slv_aw_id_i     ( dram.aw_id     ),
-    .slv_aw_addr_i   ( dram.aw_addr   ),
-    .slv_aw_prot_i   ( dram.aw_prot   ),
-    .slv_aw_region_i ( dram.aw_region ),
-    .slv_aw_atop_i   ( dram.aw_atop   ), // is there atop signal for dram?
-    .slv_aw_len_i    ( dram.aw_len    ),
-    .slv_aw_size_i   ( dram.aw_size   ),
-    .slv_aw_burst_i  ( dram.aw_burst  ),
-    .slv_aw_lock_i   ( dram.aw_lock   ),
-    .slv_aw_cache_i  ( dram.aw_cache  ),
-    .slv_aw_qos_i    ( dram.aw_qos    ),
-    .slv_aw_user_i   ( dram.aw_user   ),
-    .slv_aw_valid_i  ( dram.aw_valid  ),
-    .slv_aw_ready_o  ( dram.aw_ready  ),
+    .slv_aw_id_i     ( mst_dram_req.aw.id     ),
+    .slv_aw_addr_i   ( mst_dram_req.aw.addr   ),
+    .slv_aw_prot_i   ( mst_dram_req.aw.prot   ),
+    .slv_aw_region_i ( mst_dram_req.aw.region ),
+    .slv_aw_atop_i   ( mst_dram_req.aw.atop   ), // is there atop signal for dram?
+    .slv_aw_len_i    ( mst_dram_req.aw.len    ),
+    .slv_aw_size_i   ( mst_dram_req.aw.size   ),
+    .slv_aw_burst_i  ( mst_dram_req.aw.burst  ),
+    .slv_aw_lock_i   ( mst_dram_req.aw.lock   ),
+    .slv_aw_cache_i  ( mst_dram_req.aw.cache  ),
+    .slv_aw_qos_i    ( mst_dram_req.aw.qos    ),
+    .slv_aw_user_i   ( mst_dram_req.aw.user   ),
+    .slv_aw_valid_i  ( mst_dram_req.aw_valid  ),
+    .slv_aw_ready_o  ( mst_dram_rsp.aw_ready  ),
 
-    .slv_ar_id_i     ( dram.ar_id     ),
-    .slv_ar_addr_i   ( dram.ar_addr   ),
-    .slv_ar_prot_i   ( dram.ar_prot   ),
-    .slv_ar_region_i ( dram.ar_region ),
-    .slv_ar_len_i    ( dram.ar_len    ),
-    .slv_ar_size_i   ( dram.ar_size   ),
-    .slv_ar_burst_i  ( dram.ar_burst  ),
-    .slv_ar_lock_i   ( dram.ar_lock   ),
-    .slv_ar_cache_i  ( dram.ar_cache  ),
-    .slv_ar_qos_i    ( dram.ar_qos    ),
-    .slv_ar_user_i   ( dram.ar_user   ),
-    .slv_ar_valid_i  ( dram.ar_valid  ),
-    .slv_ar_ready_o  ( dram.ar_ready  ),
+    .slv_ar_id_i     ( mst_dram_req.ar.id     ),
+    .slv_ar_addr_i   ( mst_dram_req.ar.addr   ),
+    .slv_ar_prot_i   ( mst_dram_req.ar.prot   ),
+    .slv_ar_region_i ( mst_dram_req.ar.region ),
+    .slv_ar_len_i    ( mst_dram_req.ar.len    ),
+    .slv_ar_size_i   ( mst_dram_req.ar.size   ),
+    .slv_ar_burst_i  ( mst_dram_req.ar.burst  ),
+    .slv_ar_lock_i   ( mst_dram_req.ar.lock   ),
+    .slv_ar_cache_i  ( mst_dram_req.ar.cache  ),
+    .slv_ar_qos_i    ( mst_dram_req.ar.qos    ),
+    .slv_ar_user_i   ( mst_dram_req.ar.user   ),
+    .slv_ar_valid_i  ( mst_dram_req.ar_valid  ),
+    .slv_ar_ready_o  ( mst_dram_rsp.ar_ready  ),
 
-    .slv_w_data_i    ( dram.w_data    ),
-    .slv_w_strb_i    ( dram.w_strb    ),
-    .slv_w_user_i    ( dram.w_user    ),
-    .slv_w_last_i    ( dram.w_last    ),
-    .slv_w_valid_i   ( dram.w_valid   ),
-    .slv_w_ready_o   ( dram.w_ready   ),
+    .slv_w_data_i    ( mst_dram_req.w.data    ),
+    .slv_w_strb_i    ( mst_dram_req.w.strb    ),
+    .slv_w_user_i    ( mst_dram_req.w.user    ),
+    .slv_w_last_i    ( mst_dram_req.w.last    ),
+    .slv_w_valid_i   ( mst_dram_req.w_valid   ),
+    .slv_w_ready_o   ( mst_dram_rsp.w_ready   ),
 
-    .slv_r_id_o      ( dram.r_id      ),
-    .slv_r_data_o    ( dram.r_data    ),
-    .slv_r_resp_o    ( dram.r_resp    ),
-    .slv_r_last_o    ( dram.r_last    ),
-    .slv_r_user_o    ( dram.r_user    ),
-    .slv_r_valid_o   ( dram.r_valid   ),
-    .slv_r_ready_i   ( dram.r_ready   ),
+    .slv_r_id_o      ( mst_dram_rsp.r.id      ),
+    .slv_r_data_o    ( mst_dram_rsp.r.data    ),
+    .slv_r_resp_o    ( mst_dram_rsp.r.resp    ),
+    .slv_r_last_o    ( mst_dram_rsp.r.last    ),
+    .slv_r_user_o    ( mst_dram_rsp.r.user    ),
+    .slv_r_valid_o   ( mst_dram_rsp.r_valid   ),
+    .slv_r_ready_i   ( mst_dram_req.r_ready   ),
 
-    .slv_b_id_o      ( dram.b_id      ),
-    .slv_b_resp_o    ( dram.b_resp    ),
-    .slv_b_user_o    ( dram.b_user    ),
-    .slv_b_valid_o   ( dram.b_valid   ),
-    .slv_b_ready_i   ( dram.b_ready   ),
+    .slv_b_id_o      ( mst_dram_rsp.b.id      ),
+    .slv_b_resp_o    ( mst_dram_rsp.b.resp    ),
+    .slv_b_user_o    ( mst_dram_rsp.b.user    ),
+    .slv_b_valid_o   ( mst_dram_rsp.b_valid   ),
+    .slv_b_ready_i   ( mst_dram_req.b_ready   ),
 
     .mst_aw_id_o     ( llc_req.aw.id     ),
     .mst_aw_addr_o   ( llc_req.aw.addr   ),
@@ -547,11 +524,12 @@ module ariane_testharness #(
     .mst_b_ready_o   ( llc_req.b_ready   )
   );
 
-  // break down dram into request and respond signals
-  ariane_axi_soc::req_t   dram_req;
-  ariane_axi_soc::resp_t  dram_resp;
-  `AXI_ASSIGN_FROM_REQ(dram, dram_req)
-  `AXI_ASSIGN_TO_RESP(dram_resp, dram)
+  ariane_axi_soc::req_llc_t   dram_req;
+  ariane_axi_soc::resp_llc_t  dram_resp;
+
+  // TODO: Add LLC here
+  // assign dram_req = llc_req;
+  // assign llc_resp = dram_resp;
 
   // wrap register interface as req/resp for llc and clic
   localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
@@ -583,14 +561,19 @@ module ariane_testharness #(
 
   // config signals for llc
   reg_a32_d32_req_t llc_conf_req;
-  reg_a32_d32_rsp_t llc_conf_rsp;
+  reg_a32_d32_rsp_t llc_conf_resp;
+
+  // reg_a32_d32_req_t llc_in_req;
+  // reg_a32_d32_rsp_t llc_in_resp;
 
   ariane_axi_soc::req_t   reg_conf_req;
   ariane_axi_soc::resp_t  reg_conf_resp;
+  ariane_axi_soc::req_t   reg_llc_req;
+  ariane_axi_soc::resp_t  reg_llc_resp;
 
-  // TODO: Cannot find slave[LLCCfg], use master?
-  `AXI_ASSIGN_FROM_REQ(master[ariane_soc::LLCCfg], reg_conf_req)
-  `AXI_ASSIGN_TO_RESP(reg_conf_resp, master[ariane_soc::LLCCfg])
+  // TODO: Is it correct?
+  `AXI_ASSIGN_TO_REQ(reg_conf_req, master[ariane_soc::LLCCfg])
+  `AXI_ASSIGN_FROM_RESP(master[ariane_soc::LLCCfg], reg_conf_resp)
 
   // axi2reg interface
   axi_to_reg #(
@@ -601,44 +584,33 @@ module ariane_testharness #(
     .AXI_MAX_WRITE_TXNS ( 32'd2                      ),
     .AXI_MAX_READ_TXNS  ( 32'd2                      ),
     .DECOUPLE_W         ( 1                          ),
-    .axi_req_t          ( ariane_axi_soc::req_slv_t  ),
-    .axi_rsp_t          ( ariane_axi_soc::resp_slv_t ),
+    .axi_req_t          ( ariane_axi_soc::req_t      ),
+    .axi_rsp_t          ( ariane_axi_soc::resp_t     ),
     .reg_req_t          ( reg_a32_d32_req_t          ),
     .reg_rsp_t          ( reg_a32_d32_rsp_t          )
   ) i_axi_to_reg (
     .clk_i      ( clk_i           ),
     .rst_ni     ( rst_ni          ),
     .testmode_i ( test_en         ),
-    .axi_req_i  ( reg_conf_req    ),
-    .axi_rsp_o  ( reg_conf_resp   ),
-    .reg_req_o  ( reg_conf_req    ),
-    .reg_rsp_i  ( reg_conf_resp   )
+    .axi_req_i  ( reg_llc_req    ),
+    .axi_rsp_o  ( reg_llc_resp   ),
+    .reg_req_o  ( llc_conf_req    ),
+    .reg_rsp_i  ( llc_conf_resp   )
   );
 
-  assign llc_conf_req.addr  = reg_conf_req.aw.addr;
-  assign llc_conf_req.write = reg_conf_req.w.last;
-  assign llc_conf_req.wdata = reg_conf_req.w.data;
-  assign llc_conf_req.wstrb = reg_conf_req.w.strb;
-  assign llc_conf_req.valid = reg_conf_req.w_valid;
-
-  assign reg_bus.rdata = llc_conf_rsp.rdata;
-  assign reg_bus.error = llc_conf_rsp.error;
-  assign reg_bus.ready = llc_conf_rsp.ready;
-
-  // TODO: ID++ ?
   axi_llc_reg_wrap #(
     .SetAssociativity ( 8                               ),
     .NumLines         ( 256                             ),
     .NumBlocks        ( 8                               ),
-    .MaxThread        ( 256                             ),
+    // .MaxThread        ( 256                             ),
     .AxiIdWidth       ( ariane_soc::IdWidthSlave        ),
     .AxiAddrWidth     ( AXI_ADDRESS_WIDTH               ),
     .AxiDataWidth     ( AXI_DATA_WIDTH                  ),
     .AxiUserWidth     ( AXI_USER_WIDTH                  ),
     .slv_req_t        ( ariane_axi_soc::req_slv_t       ),
     .slv_resp_t       ( ariane_axi_soc::resp_slv_t      ),
-    .mst_req_t        ( ariane_axi_soc::req_t           ),
-    .mst_resp_t       ( ariane_axi_soc::resp_t          ),
+    .mst_req_t        ( ariane_axi_soc::req_llc_t       ),
+    .mst_resp_t       ( ariane_axi_soc::resp_llc_t      ),
     .reg_req_t        ( reg_a32_d32_req_t               ),
     .reg_resp_t       ( reg_a32_d32_rsp_t               ),
     .rule_full_t      ( axi_pkg::xbar_rule_64_t         )
@@ -651,7 +623,7 @@ module ariane_testharness #(
     .mst_req_o           ( dram_req                               ),
     .mst_resp_i          ( dram_resp                              ),
     .conf_req_i          ( llc_conf_req                           ),
-    .conf_resp_o         ( llc_conf_rsp                           ),
+    .conf_resp_o         ( llc_conf_resp                           ),
     .cached_start_addr_i ( ariane_soc::DRAMBase                           ),
     .cached_end_addr_i   ( ariane_soc::DRAMBase  + ariane_soc::DRAMLength ),
     .spm_start_addr_i    ( ariane_soc::LLCSpmBase                 ),
@@ -661,13 +633,22 @@ module ariane_testharness #(
   AXI_BUS #(
     .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
     .AXI_DATA_WIDTH ( AXI_DATA_WIDTH           ),
-    .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
+    .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave +1),
     .AXI_USER_WIDTH ( AXI_USER_WIDTH           )
   ) dram_delayed();
 
-  // need change to LLC delay, using old version axi_delayer?
+  AXI_BUS #(
+    .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
+    .AXI_DATA_WIDTH ( AXI_DATA_WIDTH           ),
+    .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave +1),
+    .AXI_USER_WIDTH ( AXI_USER_WIDTH           )
+  ) llc_to_dram();
+
+  `AXI_ASSIGN_FROM_REQ(llc_to_dram, dram_req)
+  `AXI_ASSIGN_TO_RESP(dram_resp, llc_to_dram)
+
   axi_delayer_intf #(
-    .AXI_ID_WIDTH        ( ariane_soc::IdWidthSlave ),
+    .AXI_ID_WIDTH        ( ariane_soc::IdWidthSlave +1),
     .AXI_ADDR_WIDTH      ( AXI_ADDRESS_WIDTH        ),
     .AXI_DATA_WIDTH      ( AXI_DATA_WIDTH           ),
     .AXI_USER_WIDTH      ( AXI_USER_WIDTH           ),
@@ -678,12 +659,12 @@ module ariane_testharness #(
   ) i_axi_delayer (
     .clk_i  ( clk_i        ),
     .rst_ni ( ndmreset_n   ),
-    .slv    ( dram         ),
+    .slv    ( llc_to_dram         ),
     .mst    ( dram_delayed )
   );
 
   axi2mem #(
-    .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave ),
+    .AXI_ID_WIDTH   ( ariane_soc::IdWidthSlave +1),
     .AXI_ADDR_WIDTH ( AXI_ADDRESS_WIDTH        ),
     .AXI_DATA_WIDTH ( AXI_DATA_WIDTH           ),
     .AXI_USER_WIDTH ( AXI_USER_WIDTH           )
@@ -731,9 +712,8 @@ module ariane_testharness #(
   // AXI Xbar
   // ---------------
 
-  axi_pkg::xbar_rule_64_t [ariane_soc::NB_PERIPHERALS-1:0] addr_map;
+  axi_pkg::xbar_rule_64_t [ariane_soc::NB_PERIPHERALS:0] addr_map;
 
-  // TODO: idx of SPM being DRAM? (from old LLC)
   assign addr_map = '{
     '{ idx: ariane_soc::Debug,    start_addr: ariane_soc::DebugBase,    end_addr: ariane_soc::DebugBase + ariane_soc::DebugLength       },
     '{ idx: ariane_soc::ROM,      start_addr: ariane_soc::ROMBase,      end_addr: ariane_soc::ROMBase + ariane_soc::ROMLength           },
@@ -746,11 +726,10 @@ module ariane_testharness #(
     '{ idx: ariane_soc::GPIO,     start_addr: ariane_soc::GPIOBase,     end_addr: ariane_soc::GPIOBase + ariane_soc::GPIOLength         },
     '{ idx: ariane_soc::DRAM,     start_addr: ariane_soc::DRAMBase,     end_addr: ariane_soc::DRAMBase + ariane_soc::DRAMLength         },
     '{ idx: ariane_soc::CLIC,     start_addr: ariane_soc::CLICBase,     end_addr: ariane_soc::CLICBase + ariane_soc::CLICLength         },
-    '{ idx: ariane_soc::LLCSpm,   start_addr: ariane_soc::LLCSpmBase,   end_addr: ariane_soc::LLCSpmBase + ariane_soc::LLCSpmLength     },
+    '{ idx: ariane_soc::DRAM,     start_addr: ariane_soc::LLCSpmBase,   end_addr: ariane_soc::LLCSpmBase + ariane_soc::LLCSpmLength     },
     '{ idx: ariane_soc::LLCCfg,   start_addr: ariane_soc::LLCCfgBase,   end_addr: ariane_soc::LLCCfgBase + ariane_soc::LLCCfgLength     }
   };
 
-  // TODO: NB_PREIPH ++, UsedSlvPorts -- ?
   localparam axi_pkg::xbar_cfg_t AXI_XBAR_CFG = '{
     NoSlvPorts: ariane_soc::NrSlaves,
     NoMstPorts: ariane_soc::NB_PERIPHERALS,
@@ -760,11 +739,11 @@ module ariane_testharness #(
     LatencyMode: axi_pkg::NO_LATENCY,
     PipelineStages: 1,
     AxiIdWidthSlvPorts: ariane_soc::IdWidth,
-    AxiIdUsedSlvPorts: ariane_soc::IdWidth,
+    AxiIdUsedSlvPorts: ariane_soc::IdWidth - 1,
     UniqueIds: 1'b0,
     AxiAddrWidth: AXI_ADDRESS_WIDTH,
     AxiDataWidth: AXI_DATA_WIDTH,
-    NoAddrRules: ariane_soc::NB_PERIPHERALS
+    NoAddrRules: ariane_soc::NB_PERIPHERALS + 1
   };
 
   axi_xbar_intf #(
