@@ -241,6 +241,7 @@ tbs := $(addprefix $(root-dir), $(tbs))
 # there is a definesd test-list with selected CI tests
 riscv-test-dir            := tmp/riscv-tests/build/isa/
 riscv-benchmarks-dir      := tmp/riscv-tests/build/benchmarks/
+riscv-hyp-test            := tmp/riscv-hyp-tests/build/cva6/rvh_test.elf
 riscv-asm-tests-list      := ci/riscv-asm-tests.list
 riscv-amo-tests-list      := ci/riscv-amo-tests.list
 riscv-mul-tests-list      := ci/riscv-mul-tests.list
@@ -384,6 +385,11 @@ $(riscv-clic-tests): build
 	+BASEDIR=$(riscv-test-dir) $(uvm-flags) +jtag_rbb_enable=0  -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi        \
 	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++$(riscv-test-dir)/$@ ++$(target-options) | tee tmp/riscv-clic-tests-$@.log
 
+riscv-hyp-test: build
+	$(VSIM) +permissive $(questa-flags) $(questa-cmd) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
+	+BASEDIR=$(riscv-test-dir) $(uvm-flags) +jtag_rbb_enable=0  -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi        \
+	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++$(riscv-hyp-test) ++$(target-options) | tee tmp/riscv-hyp-tests.log
+
 $(riscv-benchmarks): build
 	$(VSIM) +permissive $(questa-flags) $(questa-cmd) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
 	+BASEDIR=$(riscv-benchmarks-dir) $(uvm-flags) +jtag_rbb_enable=0 -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi   \
@@ -419,6 +425,9 @@ check-fp-tests:
 
 check-clic-tests:
 	ci/check-tests.sh tmp/riscv-clic-tests- $(shell wc -l $(riscv-clic-tests-list) | awk -F " " '{ print $1 }')
+
+# check-hyp-tests:
+# 	ci/check-tests.sh tmp/riscv-hyp-test $(shell wc -l $(riscv-clic-tests-list) | awk -F " " '{ print $1 }')
 
 # can use -jX to run ci tests in parallel using X processes
 run-benchmarks: $(riscv-benchmarks)
@@ -699,6 +708,9 @@ $(addsuffix -verilator,$(riscv-fp-tests)): verilate
 $(addsuffix -verilator,$(riscv-clic-tests)): verilate
 	$(ver-library)/Variane_testharness $(riscv-test-dir)/$(subst -verilator,,$@)
 
+riscv-hyp-test-verilator: verilate
+	$(ver-library)/Variane_testharness $(riscv-hyp-test)
+
 $(addsuffix -verilator,$(riscv-benchmarks)): verilate
 	$(ver-library)/Variane_testharness $(riscv-benchmarks-dir)/$(subst -verilator,,$@)
 
@@ -717,6 +729,8 @@ run-fp-d-verilator: $(addsuffix -verilator, $(filter rv64ud%, $(riscv-fp-tests))
 run-fp-f-verilator: $(addsuffix -verilator, $(filter rv64uf%, $(riscv-fp-tests)))
 
 run-clic-verilator: $(addsuffix -verilator, $(riscv-clic-tests))
+
+run-hyp-verilator: riscv-hyp-test-verilator
 
 run-benchmarks-verilator: $(addsuffix -verilator,$(riscv-benchmarks))
 
