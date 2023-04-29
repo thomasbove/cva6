@@ -602,7 +602,7 @@ module ariane_testharness #(
     .SetAssociativity ( 8                               ),
     .NumLines         ( 256                             ),
     .NumBlocks        ( 8                               ),
-    // .MaxThread        ( 256                             ),
+    .MaxThread        ( 256                             ),
     .AxiIdWidth       ( ariane_soc::IdWidthSlave        ),
     .AxiAddrWidth     ( AXI_ADDRESS_WIDTH               ),
     .AxiDataWidth     ( AXI_DATA_WIDTH                  ),

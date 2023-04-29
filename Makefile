@@ -225,6 +225,7 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         corev_apu/tb/common/uart.sv                                                  \
         corev_apu/axi_llc/src/axi_llc_pkg.sv                                         \
         corev_apu/axi_llc/src/axi_llc_reg_pkg.sv                                     \
+        corev_apu/axi_llc/src/axi_llc_index_assigner.sv                              \
         corev_apu/axi_llc/src/axi_llc_burst_cutter.sv                                \
         corev_apu/axi_llc/src/axi_llc_evict_unit.sv                                  \
         corev_apu/axi_llc/src/axi_llc_top.sv                                         \
@@ -246,9 +247,9 @@ src :=  corev_apu/tb/axi_adapter.sv                                             
         corev_apu/axi_llc/src/hit_miss_detect/axi_llc_lock_box_bloom.sv              \
         corev_apu/axi_llc/src/hit_miss_detect/axi_llc_miss_counters.sv               \
         corev_apu/axi_llc/src/hit_miss_detect/axi_llc_tag_pattern_gen.sv             \
-        corev_apu/axi_llc/src/hit_miss_detect/axi_llc_tag_store.sv                   
-#         corev_apu/axi_llc/src/axi_llc_sram_data.sv                                   \
-#         corev_apu/axi_llc/src/axi_llc_sram_tag.sv                                   
+        corev_apu/axi_llc/src/hit_miss_detect/axi_llc_tag_store.sv                   \
+        corev_apu/axi_llc/src/axi_llc_sram_data.sv                                   \
+        corev_apu/axi_llc/src/axi_llc_sram_tag.sv                                   
        
 flists := ${CVA6_REPO_DIR}/core/Flist.cva6
 # SV32 MMU for CV32, SV39 MMU for CV64
