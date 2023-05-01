@@ -210,6 +210,7 @@ module cva6 import ariane_pkg::*; #(
   logic [31:0]              fence_t_pad_csr_ctrl;
   logic                     fence_t_src_sel_csr_ctrl;
   logic [31:0]              fence_t_ceil_csr_ctrl;
+  riscv::xlen_t             mcast_mask;
   logic                     debug_mode;
   logic                     single_step_csr_commit;
   riscv::pmpcfg_t [15:0]    pmpcfg;
@@ -463,6 +464,7 @@ module cva6 import ariane_pkg::*; #(
     // MULT
     .mult_valid_i           ( mult_valid_id_ex            ),
     // LSU
+    .mcast_mask_i           ( mcast_mask                  ),
     .lsu_ready_o            ( lsu_ready_ex_id             ),
     .lsu_valid_i            ( lsu_valid_id_ex             ),
 
@@ -632,6 +634,7 @@ module cva6 import ariane_pkg::*; #(
     .fence_t_pad_o          ( fence_t_pad_csr_ctrl          ),
     .fence_t_src_sel_o      ( fence_t_src_sel_csr_ctrl      ),
     .fence_t_ceil_i         ( fence_t_ceil_csr_ctrl         ),
+    .mcast_mask_o           ( mcast_mask                    ),
     .perf_addr_o            ( addr_csr_perf                 ),
     .perf_data_o            ( data_csr_perf                 ),
     .perf_data_i            ( data_perf_csr                 ),

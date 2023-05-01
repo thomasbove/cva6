@@ -35,6 +35,7 @@ module axi_adapter #(
   input  ariane_pkg::amo_t                 amo_i,
   output logic                             gnt_o,
   input  logic [riscv::XLEN-1:0]           addr_i,
+  input  logic [riscv::XLEN-1:0]           mcast_mask_i,
   input  logic                             we_i,
   input  logic [(DATA_WIDTH/AXI_DATA_WIDTH)-1:0][AXI_DATA_WIDTH-1:0]      wdata_i,
   input  logic [(DATA_WIDTH/AXI_DATA_WIDTH)-1:0][(AXI_DATA_WIDTH/8)-1:0]  be_i,
@@ -88,6 +89,7 @@ module axi_adapter #(
     axi_req_o.aw.qos    = 4'b0;
     axi_req_o.aw.id     = id_i;
     axi_req_o.aw.atop   = atop_from_amo(amo_i);
+    axi_req_o.aw.user   = mcast_mask_i;
 
 
     axi_req_o.ar_valid  = 1'b0;

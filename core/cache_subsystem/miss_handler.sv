@@ -104,6 +104,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     logic [NR_PORTS-1:0]                    miss_req_we;
     logic [NR_PORTS-1:0][7:0]               miss_req_be;
     logic [NR_PORTS-1:0][1:0]               miss_req_size;
+    logic [NR_PORTS-1:0][riscv::PLEN-1:0]   miss_req_mcast_mask;
 
     // Bypass AMO port
     bypass_req_t amo_bypass_req;
@@ -543,6 +544,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
             bypass_ports_req[id].we      = miss_req_we[id];
             bypass_ports_req[id].be      = miss_req_be[id];
             bypass_ports_req[id].size    = miss_req_size[id];
+            bypass_ports_req[id].mcast_mask = miss_req_mcast_mask[id];
 
             bypass_gnt_o[id]   = bypass_ports_rsp[id].gnt;
             bypass_valid_o[id] = bypass_ports_rsp[id].valid;
@@ -577,9 +579,11 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     // ----------------------
     // Cast bypass_adapter_req.addr to axi_adapter port size
     logic [riscv::XLEN-1:0] bypass_addr;
+    logic [riscv::XLEN-1:0] bypass_mcast_mask;
     assign bypass_addr = bypass_adapter_req.addr;
+    assign bypass_mcast_mask = bypass_adapter_req.mcast_mask;
 
-    axi_adapter #(
+    axi_mcast_adapter #(
         .DATA_WIDTH            ( 64                 ),
         .CACHELINE_BYTE_OFFSET ( DCACHE_BYTE_OFFSET ),
         .AXI_ADDR_WIDTH        ( AXI_ADDR_WIDTH     ),
@@ -596,6 +600,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .amo_i                (bypass_adapter_req.amo),
         .id_i                 (({{AXI_ID_WIDTH-4{1'b0}}, bypass_adapter_req.id})),
         .addr_i               (bypass_addr),
+        .mcast_mask_i         (bypass_mcast_mask),
         .wdata_i              (bypass_adapter_req.wdata),
         .we_i                 (bypass_adapter_req.we),
         .be_i                 (bypass_adapter_req.be),
@@ -674,6 +679,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
             miss_req_we     [i]  = miss_req.we;
             miss_req_be     [i]  = miss_req.be;
             miss_req_size   [i]  = miss_req.size;
+            miss_req_mcast_mask[i] = miss_req.mcast_mask;
         end
     end
 endmodule
