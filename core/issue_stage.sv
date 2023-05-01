@@ -81,6 +81,8 @@ module issue_stage import ariane_pkg::*; #(
     output scoreboard_entry_t [NR_COMMIT_PORTS-1:0]  commit_instr_o,
     input  logic              [NR_COMMIT_PORTS-1:0]  commit_ack_i,
 
+    output logic                                     stall_issue_o, // Used in Performance Counters
+
     //RVFI
     input [riscv::VLEN-1:0]                          lsu_addr_i,
     input [(riscv::XLEN/8)-1:0]                      lsu_rmask_i,
@@ -212,6 +214,7 @@ module issue_stage import ariane_pkg::*; #(
         .rs1_forwarding_o    ( rs1_forwarding_xlen             ),
         .rs2_forwarding_o    ( rs2_forwarding_xlen             ),
         .tinst_o             ( tinst_o                         ),
+        .stall_issue_o       ( stall_issue_o                   ),
         .*
     );
 

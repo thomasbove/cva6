@@ -58,21 +58,21 @@ package ariane_pkg;
     } ariane_cfg_t;
 
     localparam ariane_cfg_t ArianeDefaultConfig = '{
-      RASDepth: cva6_config_pkg::CVA6ConfigRASDepth,
-      BTBEntries: cva6_config_pkg::CVA6ConfigBTBEntries,
-      BHTEntries: cva6_config_pkg::CVA6ConfigBHTEntries,
+      RASDepth:   int'(cva6_config_pkg::CVA6ConfigRASDepth),
+      BTBEntries: int'(cva6_config_pkg::CVA6ConfigBTBEntries),
+      BHTEntries: int'(cva6_config_pkg::CVA6ConfigBHTEntries),
       // idempotent region
-      NrNonIdempotentRules: 2,
-      NonIdempotentAddrBase: {64'b0, 64'b0},
-      NonIdempotentLength:   {64'b0, 64'b0},
-      NrExecuteRegionRules: 3,
+      NrNonIdempotentRules:  unsigned'(2),
+      NonIdempotentAddrBase: 1024'({64'b0, 64'b0}),
+      NonIdempotentLength:   1024'({64'b0, 64'b0}),
+      NrExecuteRegionRules:  unsigned'(3),
       //                      DRAM,          Boot ROM,   Debug Module
-      ExecuteRegionAddrBase: {64'h8000_0000, 64'h1_0000, 64'h0},
-      ExecuteRegionLength:   {64'h40000000,  64'h10000,  64'h1000},
+      ExecuteRegionAddrBase: 1024'({64'h8000_0000, 64'h1_0000, 64'h0}),
+      ExecuteRegionLength:   1024'({64'h40000000,  64'h10000,  64'h1000}),
       // cached region
-      NrCachedRegionRules:    1,
-      CachedRegionAddrBase:  {64'h8000_0000},
-      CachedRegionLength:    {64'h40000000},
+      NrCachedRegionRules:   unsigned'(1),
+      CachedRegionAddrBase:  1024'({64'h8000_0000}),
+      CachedRegionLength:    1024'({64'h40000000}),
       // CLIC
       CLICNumInterruptSrc:    256,
       CLICIntCtlBits:         8,
@@ -81,7 +81,7 @@ package ariane_pkg;
       SwapEndianess:          1'b0,
       // debug
       DmBaseAddress:          64'h0,
-      NrPMPEntries:           cva6_config_pkg::CVA6ConfigNrPMPEntries
+      NrPMPEntries:           unsigned'(cva6_config_pkg::CVA6ConfigNrPMPEntries)
     };
 
     // Function being called to check parameters
@@ -215,18 +215,18 @@ package ariane_pkg;
     localparam riscv::xlen_t OPENHWGROUP_MVENDORID = {{riscv::XLEN-32{1'b0}}, 32'h0602};
     localparam riscv::xlen_t ARIANE_MARCHID = {{riscv::XLEN-32{1'b0}}, 32'd3};
 
-    localparam riscv::xlen_t ISA_CODE = (RVA <<  0)  // A - Atomic Instructions extension
-                                     | (RVC <<  2)  // C - Compressed extension
-                                     | (RVD <<  3)  // D - Double precsision floating-point extension
-                                     | (RVF <<  5)  // F - Single precsision floating-point extension
-                                     | (RVH <<  7)  // H - Hypervisor mode implemented
-                                     | (1   <<  8)  // I - RV32I/64I/128I base ISA
-                                     | (1   << 12)  // M - Integer Multiply/Divide extension
-                                     | (0   << 13)  // N - User level interrupts supported
-                                     | (1   << 18)  // S - Supervisor mode implemented
-                                     | (1   << 20)  // U - User mode implemented
-                                     | (NSX << 23)  // X - Non-standard extensions present
-                                     | ((riscv::XLEN == 64 ? 2 : 1) << riscv::XLEN-2);  // MXL
+    localparam riscv::xlen_t ISA_CODE = (riscv::XLEN'(RVA) <<  0)                         // A - Atomic Instructions extension
+                                      | (riscv::XLEN'(RVC) <<  2)                         // C - Compressed extension
+                                      | (riscv::XLEN'(RVD) <<  3)                         // D - Double precsision floating-point extension
+                                      | (riscv::XLEN'(RVF) <<  5)                         // F - Single precsision floating-point extension
+                                      | (riscv::XLEN'(RVH) <<  7)                         // H - Hypervisor mode implemented
+                                      | (riscv::XLEN'(1  ) <<  8)                         // I - RV32I/64I/128I base ISA
+                                      | (riscv::XLEN'(1  ) << 12)                         // M - Integer Multiply/Divide extension
+                                      | (riscv::XLEN'(0  ) << 13)                         // N - User level interrupts supported
+                                      | (riscv::XLEN'(1  ) << 18)                         // S - Supervisor mode implemented
+                                      | (riscv::XLEN'(1  ) << 20)                         // U - User mode implemented
+                                      | (riscv::XLEN'(NSX) << 23)                         // X - Non-standard extensions present
+                                      | ((riscv::XLEN == 64 ? 2 : 1) << riscv::XLEN-2);  // MXL
 
     // 32 registers + 1 bit for re-naming = 6
     localparam REG_ADDR_SIZE = 6;
@@ -313,9 +313,12 @@ package ariane_pkg;
                                                     | riscv::MIP_VSEIP;
 
     // ---------------
-    // User bits
+    // AXI
     // ---------------
 
+    localparam AXI_ID_WIDTH = cva6_config_pkg::CVA6ConfigAxiIdWidth;
+    localparam AXI_ADDR_WIDTH = cva6_config_pkg::CVA6ConfigAxiAddrWidth;
+    localparam AXI_DATA_WIDTH = cva6_config_pkg::CVA6ConfigAxiDataWidth;
     localparam FETCH_USER_WIDTH = cva6_config_pkg::CVA6ConfigFetchUserWidth;
     localparam DATA_USER_WIDTH = cva6_config_pkg::CVA6ConfigDataUserWidth;
     localparam AXI_USER_EN = cva6_config_pkg::CVA6ConfigDataUserEn | cva6_config_pkg::CVA6ConfigFetchUserEn;
@@ -702,6 +705,10 @@ package ariane_pkg;
     // ---------------
     // ID/EX/WB Stage
     // ---------------
+
+    localparam RVFI = cva6_config_pkg::CVA6ConfigRvfiTrace;
+    typedef rvfi_pkg::rvfi_instr_t [NR_COMMIT_PORTS-1:0] rvfi_port_t;
+
     typedef struct packed {
         logic [riscv::VLEN-1:0]   pc;            // PC of instruction
         logic [TRANS_ID_BITS-1:0] trans_id;      // this can potentially be simplified, we could index the scoreboard entry
@@ -723,14 +730,12 @@ package ariane_pkg;
         branchpredict_sbe_t       bp;            // branch predict scoreboard data structure
         logic                     is_compressed; // signals a compressed instructions, we need this information at the commit stage if
                                                  // we want jump accordingly e.g.: +4, +2
-`ifdef RVFI_MEM
-        riscv::xlen_t               rs1_rdata;
-        riscv::xlen_t               rs2_rdata;
-        logic [riscv::VLEN-1:0]     lsu_addr;
-        logic [(riscv::XLEN/8)-1:0] lsu_rmask;
-        logic [(riscv::XLEN/8)-1:0] lsu_wmask;
-        riscv::xlen_t               lsu_wdata;
-`endif
+        riscv::xlen_t               rs1_rdata;   // information needed by RVFI
+        riscv::xlen_t               rs2_rdata;   // information needed by RVFI
+        logic [riscv::VLEN-1:0]     lsu_addr;    // information needed by RVFI
+        logic [(riscv::XLEN/8)-1:0] lsu_rmask;   // information needed by RVFI
+        logic [(riscv::XLEN/8)-1:0] lsu_wmask;   // information needed by RVFI
+        riscv::xlen_t               lsu_wdata;   // information needed by RVFI
     } scoreboard_entry_t;
 
     // ---------------
@@ -937,6 +942,7 @@ package ariane_pkg;
                     3'b010: return 8'b0011_1100;
                     3'b011: return 8'b0111_1000;
                     3'b100: return 8'b1111_0000;
+                    default: ; // Do nothing
                 endcase
             end
             2'b01: begin
@@ -948,6 +954,7 @@ package ariane_pkg;
                     3'b100: return 8'b0011_0000;
                     3'b101: return 8'b0110_0000;
                     3'b110: return 8'b1100_0000;
+                    default: ; // Do nothing
                 endcase
             end
             2'b00: begin
@@ -976,7 +983,7 @@ package ariane_pkg;
                     2'b00: return 4'b0011;
                     2'b01: return 4'b0110;
                     2'b10: return 4'b1100;
-
+                    default: ; // Do nothing
                 endcase
             end
             2'b00: begin

@@ -72,13 +72,15 @@ module issue_read_operands import ariane_pkg::*; #(
     input  logic [NR_COMMIT_PORTS-1:0][4:0]        waddr_i,
     input  logic [NR_COMMIT_PORTS-1:0][riscv::XLEN-1:0] wdata_i,
     input  logic [NR_COMMIT_PORTS-1:0]             we_gpr_i,
-    input  logic [NR_COMMIT_PORTS-1:0]             we_fpr_i
+    input  logic [NR_COMMIT_PORTS-1:0]             we_fpr_i,
+
+    output logic                                   stall_issue_o  // stall signal, we do not want to fetch any more entries
     // committing instruction instruction
     // from scoreboard
     // input  scoreboard_entry     commit_instr_i,
     // output logic                commit_ack_o
 );
-    logic stall;   // stall signal, we do not want to fetch any more entries
+    logic stall;   
     logic fu_busy; // functional unit is busy
     riscv::xlen_t    operand_a_regfile, operand_b_regfile;  // operands coming from regfile
     rs3_len_t operand_c_regfile; // third operand from fp regfile or gp regfile if NR_RGPR_PORTS == 3
@@ -132,6 +134,7 @@ module issue_read_operands import ariane_pkg::*; #(
     assign cvxif_valid_o       = CVXIF_PRESENT ? cvxif_valid_q : '0;
     assign cvxif_off_instr_o   = CVXIF_PRESENT ? cvxif_off_instr_q : '0;
     assign tinst_o             = tinst_q;
+    assign stall_issue_o       = stall;
     // ---------------
     // Issue Stage
     // ---------------
@@ -530,17 +533,15 @@ module issue_read_operands import ariane_pkg::*; #(
     end
 
     //pragma translate_off
-    `ifndef VERILATOR
     initial begin
         assert (NR_RGPR_PORTS == 2 || (NR_RGPR_PORTS == 3 && CVXIF_PRESENT))
         else $fatal(1, "If CVXIF is enable, ariane regfile can have either 2 or 3 read ports. Else it has 2 read ports.");
     end
 
-     assert property (
+    assert property (
         @(posedge clk_i) (branch_valid_q) |-> (!$isunknown(operand_a_q) && !$isunknown(operand_b_q)))
         else $warning ("Got unknown value in one of the operands");
 
-    `endif
     //pragma translate_on
 endmodule
 
