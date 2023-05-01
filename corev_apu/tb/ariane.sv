@@ -36,14 +36,10 @@ module ariane import ariane_pkg::*; #(
   // Timer facilities
   input  logic                         time_irq_i,   // timer interrupt in (async)
   input  logic                         debug_req_i,  // debug request (async)
-`ifdef FIRESIM_TRACE
-  // firesim trace port
-  output traced_instr_pkg::trace_port_t trace_o,
-`endif
-`ifdef RVFI_TRACE
+`ifdef RVFI_PORT
   // RISC-V formal interface port (`rvfi`):
   // Can be left open when formal tracing is not needed.
-  output ariane_rvfi_pkg::rvfi_port_t  rvfi_o,
+  output rvfi_port_t                   rvfi_o,
 `endif
 `ifdef PITON_ARIANE
   // L15 (memory side)
@@ -86,7 +82,7 @@ module ariane import ariane_pkg::*; #(
     .clic_irq_ready_o     (                           ),
     .clic_kill_req_i      ( 1'b0                      ),
     .clic_kill_ack_o      (                           ),
-`ifdef RVFI_TRACE
+`ifdef RVFI_PORT
     .rvfi_o               ( rvfi_o                    ),
 `else
     .rvfi_o               (                           ),

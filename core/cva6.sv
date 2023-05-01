@@ -12,16 +12,6 @@
 // Date: 19.03.2017
 // Description: CVA6 Top-level module
 
-`ifdef DROMAJO
-import "DPI-C" function void dromajo_trap(int     hart_id,
-                                          longint cause);
-import "DPI-C" function void dromajo_step(int     hart_id,
-                                          longint pc,
-                                          int     insn,
-                                          longint wdata, longint cycle);
-import "DPI-C" function void init_dromajo(string cfg_f_name);
-`endif
-
 
 module cva6 import ariane_pkg::*; #(
   parameter ariane_pkg::ariane_cfg_t ArianeCfg     = ariane_pkg::ArianeDefaultConfig,
@@ -57,7 +47,7 @@ module cva6 import ariane_pkg::*; #(
   output logic                         clic_kill_ack_o,  // kill acknowledge
   // RISC-V formal interface port (`rvfi`):
   // Can be left open when formal tracing is not needed.
-  output ariane_rvfi_pkg::rvfi_port_t  rvfi_o,
+  output ariane_pkg::rvfi_port_t       rvfi_o,
   output cvxif_pkg::cvxif_req_t        cvxif_req_o,
   input  cvxif_pkg::cvxif_resp_t       cvxif_resp_i,
   // L15 (memory side)
@@ -80,6 +70,8 @@ module cva6 import ariane_pkg::*; #(
   logic                       eret;
   logic [NR_COMMIT_PORTS-1:0] commit_ack;
   logic                       rst_uarch_n;
+
+  localparam NumPorts = 3;
 
   // --------------
   // PCGEN <-> CSR
@@ -237,7 +229,7 @@ module cva6 import ariane_pkg::*; #(
   // ----------------------------
   // Performance Counters <-> *
   // ----------------------------
-  logic [4:0]               addr_csr_perf;
+  logic [11:0]              addr_csr_perf;
   riscv::xlen_t             data_csr_perf, data_perf_csr;
   logic                     we_csr_perf;
 
@@ -246,6 +238,8 @@ module cva6 import ariane_pkg::*; #(
   logic                     dtlb_miss_ex_perf;
   logic                     dcache_miss_cache_perf;
   logic                     icache_miss_cache_perf;
+  logic [NumPorts-1:0][DCACHE_SET_ASSOC-1:0] miss_vld_bits;
+  logic                     stall_issue;
   // --------------
   // CTRL <-> *
   // --------------
@@ -459,6 +453,8 @@ module cva6 import ariane_pkg::*; #(
     .we_fpr_i                   ( we_fpr_commit_id             ),
     .commit_instr_o             ( commit_instr_id_commit       ),
     .commit_ack_i               ( commit_ack                   ),
+    // Performance Counters
+    .stall_issue_o              ( stall_issue                  ),
     //RVFI
     .lsu_addr_i                 ( lsu_addr                     ),
     .lsu_rmask_i                ( lsu_rmask                    ),
@@ -728,28 +724,36 @@ module cva6 import ariane_pkg::*; #(
   // Performance Counters
   // ------------------------
   if (PERF_COUNTER_EN) begin: gen_perf_counter
-    perf_counters i_perf_counters (
-      .clk_i             ( clk_i                  ),
-      .rst_ni            ( rst_ni                 ),
-      .debug_mode_i      ( debug_mode             ),
-      .addr_i            ( addr_csr_perf          ),
-      .we_i              ( we_csr_perf            ),
-      .data_i            ( data_csr_perf          ),
-      .data_o            ( data_perf_csr          ),
-      .commit_instr_i    ( commit_instr_id_commit ),
-      .commit_ack_i      ( commit_ack             ),
+  perf_counters #(
+    .NumPorts            ( NumPorts                  )
+  ) perf_counters_i (
+    .clk_i               ( clk_i                     ),
+    .rst_ni              ( rst_ni                    ),
+    .debug_mode_i        ( debug_mode                ),
+    .addr_i              ( addr_csr_perf             ),
+    .we_i                ( we_csr_perf               ),
+    .data_i              ( data_csr_perf             ),
+    .data_o              ( data_perf_csr             ),
+    .commit_instr_i      ( commit_instr_id_commit    ),
+    .commit_ack_i        ( commit_ack                ),
 
-      .l1_icache_miss_i  ( icache_miss_cache_perf ),
-      .l1_dcache_miss_i  ( dcache_miss_cache_perf ),
-      .itlb_miss_i       ( itlb_miss_ex_perf      ),
-      .dtlb_miss_i       ( dtlb_miss_ex_perf      ),
-      .sb_full_i         ( sb_full                ),
-      .if_empty_i        ( ~fetch_valid_if_id     ),
-      .ex_i              ( ex_commit              ),
-      .eret_i            ( eret                   ),
-      .resolved_branch_i ( resolved_branch        )
-    );
-  end
+    .l1_icache_miss_i    ( icache_miss_cache_perf    ),
+    .l1_dcache_miss_i    ( dcache_miss_cache_perf    ),
+    .itlb_miss_i         ( itlb_miss_ex_perf         ),
+    .dtlb_miss_i         ( dtlb_miss_ex_perf         ),
+    .sb_full_i           ( sb_full                   ),
+    .if_empty_i          ( ~fetch_valid_if_id        ),
+    .ex_i                ( ex_commit                 ),
+    .eret_i              ( eret                      ),
+    .resolved_branch_i   ( resolved_branch           ),
+    .branch_exceptions_i ( flu_exception_ex_id       ),
+    .l1_icache_access_i  ( icache_dreq_if_cache      ),
+    .l1_dcache_access_i  ( dcache_req_ports_ex_cache ),
+    .miss_vld_bits_i     ( miss_vld_bits             ),
+    .i_tlb_flush_i       ( flush_tlb_ctrl_ex         ),
+    .stall_issue_i       ( stall_issue               )
+  );
+ end
 
   // ------------
   // Controller
@@ -809,6 +813,7 @@ module cva6 import ariane_pkg::*; #(
   // this is a cache subsystem that is compatible with OpenPiton
   wt_cache_subsystem #(
     .ArianeCfg            ( ArianeCfg ),
+    .NumPorts             ( NumPorts  ),
     .AxiAddrWidth         ( AxiAddrWidth ),
     .AxiDataWidth         ( AxiDataWidth ),
     .AxiIdWidth           ( AxiIdWidth ),
@@ -838,6 +843,7 @@ module cva6 import ariane_pkg::*; #(
     .dcache_amo_resp_o     ( amo_resp                    ),
     // from PTW, Load Unit  and Store Unit
     .dcache_miss_o         ( dcache_miss_cache_perf      ),
+    .miss_vld_bits_o       ( miss_vld_bits               ),
     .dcache_req_ports_i    ( dcache_req_ports_ex_cache   ),
     .dcache_req_ports_o    ( dcache_req_ports_cache_ex   ),
     // write buffer status
@@ -949,22 +955,6 @@ module cva6 import ariane_pkg::*; #(
   // Instruction Tracer
   // -------------------
 
-  // Instruction trace port (used for FireSim)
-`ifdef FIRESIM_TRACE
-  for (genvar i = 0; i < NR_COMMIT_PORTS; i++) begin : gen_tp_connect
-    assign trace_o[i].clock = clk_i;
-    assign trace_o[i].reset = rst_ni;
-    assign trace_o[i].valid = commit_ack[i] & ~commit_instr_id_commit[i].ex.valid;
-    assign trace_o[i].iaddr = commit_instr_id_commit[i].pc;
-    assign trace_o[i].insn = commit_instr_id_commit[i].ex.tval[31:0];
-    assign trace_o[i].priv = priv_lvl;
-    assign trace_o[i].exception = commit_ack[i] & commit_instr_id_commit[i].ex.valid & ~commit_instr_id_commit[i].ex.cause[63];
-    assign trace_o[i].interrupt = commit_ack[i] & commit_instr_id_commit[i].ex.valid & commit_instr_id_commit[i].ex.cause[63];
-    assign trace_o[i].cause = commit_instr_id_commit[i].ex.cause;
-    assign trace_o[i].tval = commit_instr_id_commit[i].ex.tval[31:0];
-  end
-`endif
-
   //pragma translate_off
 `ifdef PITON_ARIANE
   localparam PC_QUEUE_DEPTH = 16;
@@ -1060,50 +1050,9 @@ module cva6 import ariane_pkg::*; #(
   int f;
   logic [63:0] cycles;
 
-`ifdef DROMAJO
-  initial begin
-    string f_name;
-    if ($value$plusargs("checkpoint=%s", f_name)) begin
-      init_dromajo({f_name, ".cfg"});
-      $display("Done initing dromajo...");
-    end else begin
-      $display("Failed initing dromajo. Provide checkpoint name.");
-    end
-  end
-`endif
-
   initial begin
     f = $fopen("trace_hart_00.dasm", "w");
   end
-
-`ifdef DROMAJO
-  always_ff @(posedge clk_i) begin
-      for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
-        if (commit_instr_id_commit[i].ex.valid) begin
-          dromajo_trap(hart_id_i,
-                       commit_instr_id_commit[i].ex.cause);
-        end
-      end
-  end
-
-  always_ff @(posedge clk_i) begin
-    for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
-      if (commit_ack[i] && !commit_instr_id_commit[i].ex.valid) begin
-        if (csr_op_commit_csr == 0) begin
-          dromajo_step(hart_id_i,
-                       commit_instr_id_commit[i].pc,
-                       commit_instr_id_commit[i].ex.tval[31:0],
-                       commit_instr_id_commit[i].result, cycles);
-        end else begin
-          dromajo_step(hart_id_i,
-                       commit_instr_id_commit[i].pc,
-                       commit_instr_id_commit[i].ex.tval[31:0],
-                       csr_rdata_csr_commit, cycles);
-        end
-      end
-    end
-  end
-`endif
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (~rst_ni) begin
@@ -1116,6 +1065,7 @@ module cva6 import ariane_pkg::*; #(
         riscv::PRIV_LVL_M: mode = "M";
         riscv::PRIV_LVL_S: mode = "S";
         riscv::PRIV_LVL_U: mode = "U";
+        default: ; // Do nothing
         endcase
       end
       for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
@@ -1143,51 +1093,51 @@ module cva6 import ariane_pkg::*; #(
 `endif // VERILATOR
 //pragma translate_on
 
-`ifdef RVFI_TRACE
-  always_comb begin
-    for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
-      logic exception, mem_exception;
-      exception = commit_instr_id_commit[i].valid && ex_commit.valid;
-      mem_exception = exception &&
-        (ex_commit.cause == riscv::INSTR_ADDR_MISALIGNED ||
-         ex_commit.cause == riscv::INSTR_ACCESS_FAULT ||
-         ex_commit.cause == riscv::ILLEGAL_INSTR ||
-         ex_commit.cause == riscv::LD_ADDR_MISALIGNED ||
-         ex_commit.cause == riscv::LD_ACCESS_FAULT ||
-         ex_commit.cause == riscv::ST_ADDR_MISALIGNED ||
-         ex_commit.cause == riscv::ST_ACCESS_FAULT ||
-         ex_commit.cause == riscv::INSTR_PAGE_FAULT ||
-         ex_commit.cause == riscv::LOAD_PAGE_FAULT ||
-         ex_commit.cause == riscv::STORE_PAGE_FAULT);
-      // when rvfi_valid, the instruction is executed
-      rvfi_o[i].valid    = (commit_ack[i] && !ex_commit.valid) ||
-        (exception && (ex_commit.cause == riscv::ENV_CALL_MMODE ||
-                  ex_commit.cause == riscv::ENV_CALL_SMODE ||
-                  ex_commit.cause == riscv::ENV_CALL_UMODE));
-      rvfi_o[i].insn     = ex_commit.valid ? ex_commit.tval[31:0] : commit_instr_id_commit[i].ex.tval[31:0];
-      // when trap, the instruction is not executed
-      rvfi_o[i].trap     = mem_exception;
-      rvfi_o[i].cause    = ex_commit.cause;
-      rvfi_o[i].mode     = debug_mode ? 2'b10 : priv_lvl;
-      rvfi_o[i].ixl      = riscv::XLEN == 64 ? 2 : 1;
-      rvfi_o[i].rs1_addr = commit_instr_id_commit[i].rs1;
-      rvfi_o[i].rs2_addr = commit_instr_id_commit[i].rs2;
-      rvfi_o[i].rd_addr  = commit_instr_id_commit[i].rd;
-      rvfi_o[i].rd_wdata = ariane_pkg::is_rd_fpr(commit_instr_id_commit[i].op) == 0 ? wdata_commit_id[i] : commit_instr_id_commit[i].result;
-      rvfi_o[i].pc_rdata = commit_instr_id_commit[i].pc;
-`ifdef RVFI_MEM
-      rvfi_o[i].mem_addr  = commit_instr_id_commit[i].lsu_addr;
-      // So far, only write paddr is reported. TODO: read paddr
-      rvfi_o[i].mem_paddr = mem_paddr;
-      rvfi_o[i].mem_wmask = commit_instr_id_commit[i].lsu_wmask;
-      rvfi_o[i].mem_wdata = commit_instr_id_commit[i].lsu_wdata;
-      rvfi_o[i].mem_rmask = commit_instr_id_commit[i].lsu_rmask;
-      rvfi_o[i].mem_rdata = commit_instr_id_commit[i].result;
-      rvfi_o[i].rs1_rdata = commit_instr_id_commit[i].rs1_rdata;
-      rvfi_o[i].rs2_rdata = commit_instr_id_commit[i].rs2_rdata;
-`endif
+  if (ariane_pkg::RVFI) begin
+    always_comb begin
+      for (int i = 0; i < NR_COMMIT_PORTS; i++) begin
+        logic exception, mem_exception;
+        exception = commit_instr_id_commit[i].valid && ex_commit.valid;
+        mem_exception = exception &&
+          (ex_commit.cause == riscv::INSTR_ADDR_MISALIGNED ||
+           ex_commit.cause == riscv::INSTR_ACCESS_FAULT ||
+           ex_commit.cause == riscv::ILLEGAL_INSTR ||
+           ex_commit.cause == riscv::LD_ADDR_MISALIGNED ||
+           ex_commit.cause == riscv::LD_ACCESS_FAULT ||
+           ex_commit.cause == riscv::ST_ADDR_MISALIGNED ||
+           ex_commit.cause == riscv::ST_ACCESS_FAULT ||
+           ex_commit.cause == riscv::INSTR_PAGE_FAULT ||
+           ex_commit.cause == riscv::LOAD_PAGE_FAULT ||
+           ex_commit.cause == riscv::STORE_PAGE_FAULT);
+        // when rvfi_valid, the instruction is executed
+        rvfi_o[i].valid    = (commit_ack[i] && !ex_commit.valid) ||
+          (exception && (ex_commit.cause == riscv::ENV_CALL_MMODE ||
+                    ex_commit.cause == riscv::ENV_CALL_SMODE ||
+                    ex_commit.cause == riscv::ENV_CALL_UMODE));
+        rvfi_o[i].insn     = ex_commit.valid ? ex_commit.tval[31:0] : commit_instr_id_commit[i].ex.tval[31:0];
+        // when trap, the instruction is not executed
+        rvfi_o[i].trap     = mem_exception;
+        rvfi_o[i].cause    = ex_commit.cause;
+        rvfi_o[i].mode     = debug_mode ? 2'b10 : priv_lvl;
+        rvfi_o[i].ixl      = riscv::XLEN == 64 ? 2 : 1;
+        rvfi_o[i].rs1_addr = commit_instr_id_commit[i].rs1;
+        rvfi_o[i].rs2_addr = commit_instr_id_commit[i].rs2;
+        rvfi_o[i].rd_addr  = commit_instr_id_commit[i].rd;
+        rvfi_o[i].rd_wdata = ariane_pkg::is_rd_fpr(commit_instr_id_commit[i].op) == 0 ? wdata_commit_id[i] : commit_instr_id_commit[i].result;
+        rvfi_o[i].pc_rdata = commit_instr_id_commit[i].pc;
+
+        rvfi_o[i].mem_addr  = commit_instr_id_commit[i].lsu_addr;
+        // So far, only write paddr is reported. TODO: read paddr
+        rvfi_o[i].mem_paddr = mem_paddr;
+        rvfi_o[i].mem_wmask = commit_instr_id_commit[i].lsu_wmask;
+        rvfi_o[i].mem_wdata = commit_instr_id_commit[i].lsu_wdata;
+        rvfi_o[i].mem_rmask = commit_instr_id_commit[i].lsu_rmask;
+        rvfi_o[i].mem_rdata = commit_instr_id_commit[i].result;
+        rvfi_o[i].rs1_rdata = commit_instr_id_commit[i].rs1_rdata;
+        rvfi_o[i].rs2_rdata = commit_instr_id_commit[i].rs2_rdata;
+
+      end
     end
   end
-`endif
 
 endmodule // ariane

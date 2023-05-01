@@ -30,6 +30,9 @@ package cva6_config_pkg;
     localparam CVA6ConfigSclicExtEn = 0;
     localparam CVA6ConfigHExtEn = 0; // always disabled
 
+    localparam CVA6ConfigAxiIdWidth = 4;
+    localparam CVA6ConfigAxiAddrWidth = 64;
+    localparam CVA6ConfigAxiDataWidth = 64;
     localparam CVA6ConfigFetchUserEn = 0;
     localparam CVA6ConfigFetchUserWidth = CVA6ConfigXlen;
     localparam CVA6ConfigDataUserEn = 0;
@@ -71,5 +74,14 @@ package cva6_config_pkg;
     localparam CVA6ConfigDcacheType = WB;
 
     localparam CVA6ConfigMmuPresent = 1;
+
+    `define RVFI_PORT
+
+    // Do not modify
+    `ifdef RVFI_PORT
+       localparam CVA6ConfigRvfiTrace = 1;
+    `else
+       localparam CVA6ConfigRvfiTrace = 0;
+    `endif
 
 endpackage
