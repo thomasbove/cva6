@@ -427,7 +427,7 @@ module ariane_testharness #(
     .slv_aw_addr_i   ( mst_dram_req.aw.addr   ),
     .slv_aw_prot_i   ( mst_dram_req.aw.prot   ),
     .slv_aw_region_i ( mst_dram_req.aw.region ),
-    .slv_aw_atop_i   ( mst_dram_req.aw.atop   ), // is there atop signal for dram?
+    .slv_aw_atop_i   ( mst_dram_req.aw.atop   ),
     .slv_aw_len_i    ( mst_dram_req.aw.len    ),
     .slv_aw_size_i   ( mst_dram_req.aw.size   ),
     .slv_aw_burst_i  ( mst_dram_req.aw.burst  ),
@@ -527,7 +527,7 @@ module ariane_testharness #(
   ariane_axi_soc::req_llc_t   dram_req;
   ariane_axi_soc::resp_llc_t  dram_resp;
 
-  // TODO: Add LLC here
+  // TODO: Add a LLC bypass logic here. Notice LLC needs 1 more ID width
   // assign dram_req = llc_req;
   // assign llc_resp = dram_resp;
 
@@ -559,21 +559,18 @@ module ariane_testharness #(
   `REG_BUS_TYPEDEF_RSP(reg_a32_d32_rsp_t, data_t)
 
 
-  // config signals for llc
-  reg_a32_d32_req_t llc_conf_req;
-  reg_a32_d32_rsp_t llc_conf_resp;
+  // convert config signals for llc from AXI to register interface
+  // reg*: register interface signals
+  // llc*: AXI slave type signals
 
-  // reg_a32_d32_req_t llc_in_req;
-  // reg_a32_d32_rsp_t llc_in_resp;
+  reg_a32_d32_req_t reg_conf_req;
+  reg_a32_d32_rsp_t reg_conf_resp;
 
-  ariane_axi_soc::req_t   reg_conf_req;
-  ariane_axi_soc::resp_t  reg_conf_resp;
-  ariane_axi_soc::req_t   reg_llc_req;
-  ariane_axi_soc::resp_t  reg_llc_resp;
+  ariane_axi_soc::req_t   llc_conf_req;
+  ariane_axi_soc::resp_t  llc_conf_resp;
 
-  // TODO: Is it correct?
-  `AXI_ASSIGN_TO_REQ(reg_conf_req, master[ariane_soc::LLCCfg])
-  `AXI_ASSIGN_FROM_RESP(master[ariane_soc::LLCCfg], reg_conf_resp)
+  `AXI_ASSIGN_TO_REQ(llc_conf_req, master[ariane_soc::LLCCfg])
+  `AXI_ASSIGN_FROM_RESP(master[ariane_soc::LLCCfg], llc_conf_resp)
 
   // axi2reg interface
   axi_to_reg #(
@@ -592,12 +589,13 @@ module ariane_testharness #(
     .clk_i      ( clk_i           ),
     .rst_ni     ( rst_ni          ),
     .testmode_i ( test_en         ),
-    .axi_req_i  ( reg_llc_req    ),
-    .axi_rsp_o  ( reg_llc_resp   ),
-    .reg_req_o  ( llc_conf_req    ),
-    .reg_rsp_i  ( llc_conf_resp   )
+    .axi_req_i  ( llc_conf_req    ),
+    .axi_rsp_o  ( llc_conf_resp   ),
+    .reg_req_o  ( reg_conf_req    ),
+    .reg_rsp_i  ( reg_conf_resp   )
   );
 
+  // TODO: parameterize the llc
   axi_llc_reg_wrap #(
     .SetAssociativity ( 8                               ),
     .NumLines         ( 256                             ),
@@ -622,8 +620,8 @@ module ariane_testharness #(
     .slv_resp_o          ( llc_resp                               ),
     .mst_req_o           ( dram_req                               ),
     .mst_resp_i          ( dram_resp                              ),
-    .conf_req_i          ( llc_conf_req                           ),
-    .conf_resp_o         ( llc_conf_resp                           ),
+    .conf_req_i          ( reg_conf_req                           ),
+    .conf_resp_o         ( reg_conf_resp                          ),
     .cached_start_addr_i ( ariane_soc::DRAMBase                           ),
     .cached_end_addr_i   ( ariane_soc::DRAMBase  + ariane_soc::DRAMLength ),
     .spm_start_addr_i    ( ariane_soc::LLCSpmBase                 ),
@@ -644,6 +642,8 @@ module ariane_testharness #(
     .AXI_USER_WIDTH ( AXI_USER_WIDTH           )
   ) llc_to_dram();
 
+
+  // delay the request to dram to simulate the real situation
   `AXI_ASSIGN_FROM_REQ(llc_to_dram, dram_req)
   `AXI_ASSIGN_TO_RESP(dram_resp, llc_to_dram)
 
@@ -659,7 +659,7 @@ module ariane_testharness #(
   ) i_axi_delayer (
     .clk_i  ( clk_i        ),
     .rst_ni ( ndmreset_n   ),
-    .slv    ( llc_to_dram         ),
+    .slv    ( llc_to_dram  ),
     .mst    ( dram_delayed )
   );
 

@@ -38,16 +38,18 @@ read_ip { \
 }
 # read_ip xilinx/xlnx_protocol_checker/ip/xlnx_protocol_checker.xci
 
-set_property include_dirs { "src/axi_sd_bridge/include" "../../vendor/pulp-platform/common_cells/include" "../../vendor/pulp-platform/axi/include" "../register_interface/include"} [current_fileset]
+set_property include_dirs { "src/axi_sd_bridge/include" "../../vendor/pulp-platform/common_cells/include" "../../vendor/pulp-platform/axi/include" "../register_interface/include" "../axi_llc/include"} [current_fileset]
 
 source scripts/add_sources.tcl
 
 set_property top ${project}_xilinx [current_fileset]
 
 if {$::env(BOARD) eq "genesys2"} {
-    read_verilog -sv {src/genesysii.svh ../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh}
+    read_verilog -sv {src/genesysii.svh ../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh ../../vendor/pulp-platform/axi/include/axi/assign.svh ../../vendor/pulp-platform/axi/include/axi/typedef.svh}
     set file "src/genesysii.svh"
     set registers "../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh"
+    set axi_assign " ../../vendor/pulp-platform/axi/include/axi/assign.svh"
+    set axi_typedef " ../../vendor/pulp-platform/axi/include/axi/typedef.svh"
 } elseif {$::env(BOARD) eq "kc705"} {
       read_verilog -sv {src/kc705.svh ../../vendor/pulp-platform/common_cells/include/common_cells/registers.svh}
       set file "src/kc705.svh"
@@ -60,7 +62,7 @@ if {$::env(BOARD) eq "genesys2"} {
     exit 1
 }
 
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file" "$registers"]]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file" "*$registers" "*$axi_assign" "*$axi_typedef"]]
 set_property -dict { file_type {Verilog Header} is_global_include 1} -objects $file_obj
 
 update_compile_order -fileset sources_1

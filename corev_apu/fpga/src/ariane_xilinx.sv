@@ -264,7 +264,7 @@ assign rst = ddr_sync_reset;
 // AXI Xbar
 // ---------------
 
-axi_pkg::xbar_rule_64_t [ariane_soc::NB_PERIPHERALS-1:0] addr_map;
+axi_pkg::xbar_rule_64_t [ariane_soc::NB_PERIPHERALS:0] addr_map;
 
 assign addr_map = '{
   '{ idx: ariane_soc::Debug,    start_addr: ariane_soc::DebugBase,    end_addr: ariane_soc::DebugBase + ariane_soc::DebugLength       },
@@ -277,7 +277,9 @@ assign addr_map = '{
   '{ idx: ariane_soc::Ethernet, start_addr: ariane_soc::EthernetBase, end_addr: ariane_soc::EthernetBase + ariane_soc::EthernetLength },
   '{ idx: ariane_soc::GPIO,     start_addr: ariane_soc::GPIOBase,     end_addr: ariane_soc::GPIOBase + ariane_soc::GPIOLength         },
   '{ idx: ariane_soc::DRAM,     start_addr: ariane_soc::DRAMBase,     end_addr: ariane_soc::DRAMBase + ariane_soc::DRAMLength         },
-  '{ idx: ariane_soc::CLIC,     start_addr: ariane_soc::CLICBase,     end_addr: ariane_soc::CLICBase + ariane_soc::CLICLength         }
+  '{ idx: ariane_soc::CLIC,     start_addr: ariane_soc::CLICBase,     end_addr: ariane_soc::CLICBase + ariane_soc::CLICLength         },
+  '{ idx: ariane_soc::DRAM,     start_addr: ariane_soc::LLCSpmBase,   end_addr: ariane_soc::LLCSpmBase + ariane_soc::LLCSpmLength     },
+  '{ idx: ariane_soc::LLCCfg,   start_addr: ariane_soc::LLCCfgBase,   end_addr: ariane_soc::LLCCfgBase + ariane_soc::LLCCfgLength     }
 };
 
 localparam axi_pkg::xbar_cfg_t AXI_XBAR_CFG = '{
@@ -289,11 +291,11 @@ localparam axi_pkg::xbar_cfg_t AXI_XBAR_CFG = '{
   LatencyMode:        axi_pkg::CUT_ALL_PORTS,
   PipelineStages:     1,
   AxiIdWidthSlvPorts: AxiIdWidthMaster,
-  AxiIdUsedSlvPorts:  AxiIdWidthMaster,
+  AxiIdUsedSlvPorts:  AxiIdWidthMaster - 1,
   UniqueIds:          1'b0,
   AxiAddrWidth:       AxiAddrWidth,
   AxiDataWidth:       AxiDataWidth,
-  NoAddrRules:        ariane_soc::NB_PERIPHERALS
+  NoAddrRules:        ariane_soc::NB_PERIPHERALS + 1
 };
 
 axi_xbar_intf #(
@@ -1106,7 +1108,7 @@ ariane_peripherals #(
 // ---------------
 // DDR
 // ---------------
-logic [AxiIdWidthSlaves-1:0] s_axi_awid;
+logic [AxiIdWidthSlaves:0]   s_axi_awid;
 logic [AxiAddrWidth-1:0]     s_axi_awaddr;
 logic [7:0]                  s_axi_awlen;
 logic [2:0]                  s_axi_awsize;
@@ -1123,11 +1125,11 @@ logic [AxiDataWidth/8-1:0]   s_axi_wstrb;
 logic                        s_axi_wlast;
 logic                        s_axi_wvalid;
 logic                        s_axi_wready;
-logic [AxiIdWidthSlaves-1:0] s_axi_bid;
+logic [AxiIdWidthSlaves:0]   s_axi_bid;
 logic [1:0]                  s_axi_bresp;
 logic                        s_axi_bvalid;
 logic                        s_axi_bready;
-logic [AxiIdWidthSlaves-1:0] s_axi_arid;
+logic [AxiIdWidthSlaves:0]   s_axi_arid;
 logic [AxiAddrWidth-1:0]     s_axi_araddr;
 logic [7:0]                  s_axi_arlen;
 logic [2:0]                  s_axi_arsize;
@@ -1139,33 +1141,278 @@ logic [3:0]                  s_axi_arregion;
 logic [3:0]                  s_axi_arqos;
 logic                        s_axi_arvalid;
 logic                        s_axi_arready;
-logic [AxiIdWidthSlaves-1:0] s_axi_rid;
+logic [AxiIdWidthSlaves:0]   s_axi_rid;
 logic [AxiDataWidth-1:0]     s_axi_rdata;
 logic [1:0]                  s_axi_rresp;
 logic                        s_axi_rlast;
 logic                        s_axi_rvalid;
 logic                        s_axi_rready;
 
-AXI_BUS #(
-    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
-    .AXI_DATA_WIDTH ( AxiDataWidth     ),
-    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
-    .AXI_USER_WIDTH ( AxiUserWidth     )
-) dram();
+// AXI bus to xbar for dram 
+ariane_axi_soc::req_slv_t     mst_dram_req;
+ariane_axi_soc::resp_slv_t    mst_dram_rsp;
+ariane_axi_soc::req_slv_t     llc_req;
+ariane_axi_soc::resp_slv_t    llc_resp;
 
-axi_riscv_atomics_wrap #(
-    .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
-    .AXI_DATA_WIDTH ( AxiDataWidth     ),
-    .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
-    .AXI_USER_WIDTH ( AxiUserWidth     ),
-    .AXI_MAX_WRITE_TXNS ( 1  ),
-    .RISCV_WORD_WIDTH   ( 64 )
-) i_axi_riscv_atomics (
-    .clk_i  ( clk                      ),
-    .rst_ni ( ndmreset_n               ),
-    .slv    ( master[ariane_soc::DRAM] ),
-    .mst    ( dram                     )
+`AXI_ASSIGN_TO_REQ(mst_dram_req, master[ariane_soc::DRAM])
+`AXI_ASSIGN_FROM_RESP(master[ariane_soc::DRAM], mst_dram_rsp)
+
+// AXI_BUS #(
+//     .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+//     .AXI_DATA_WIDTH ( AxiDataWidth     ),
+//     .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
+//     .AXI_USER_WIDTH ( AxiUserWidth     )
+// ) dram();
+
+axi_riscv_atomics #(
+    .AXI_ADDR_WIDTH    ( AxiAddrWidth        ),
+    .AXI_DATA_WIDTH    ( AxiDataWidth           ),
+    .AXI_ID_WIDTH      ( AxiIdWidthSlaves),
+    .AXI_USER_WIDTH    ( AxiUserWidth           ),
+    .AXI_MAX_WRITE_TXNS( 1                        ),
+    .RISCV_WORD_WIDTH  ( 64                       )
+    ) i_axi_riscv_atomics (
+    .clk_i           ( clk_i          ),
+    .rst_ni          ( ndmreset_n     ),
+    .slv_aw_id_i     ( mst_dram_req.aw.id     ),
+    .slv_aw_addr_i   ( mst_dram_req.aw.addr   ),
+    .slv_aw_prot_i   ( mst_dram_req.aw.prot   ),
+    .slv_aw_region_i ( mst_dram_req.aw.region ),
+    .slv_aw_atop_i   ( mst_dram_req.aw.atop   ),
+    .slv_aw_len_i    ( mst_dram_req.aw.len    ),
+    .slv_aw_size_i   ( mst_dram_req.aw.size   ),
+    .slv_aw_burst_i  ( mst_dram_req.aw.burst  ),
+    .slv_aw_lock_i   ( mst_dram_req.aw.lock   ),
+    .slv_aw_cache_i  ( mst_dram_req.aw.cache  ),
+    .slv_aw_qos_i    ( mst_dram_req.aw.qos    ),
+    .slv_aw_user_i   ( mst_dram_req.aw.user   ),
+    .slv_aw_valid_i  ( mst_dram_req.aw_valid  ),
+    .slv_aw_ready_o  ( mst_dram_rsp.aw_ready  ),
+
+    .slv_ar_id_i     ( mst_dram_req.ar.id     ),
+    .slv_ar_addr_i   ( mst_dram_req.ar.addr   ),
+    .slv_ar_prot_i   ( mst_dram_req.ar.prot   ),
+    .slv_ar_region_i ( mst_dram_req.ar.region ),
+    .slv_ar_len_i    ( mst_dram_req.ar.len    ),
+    .slv_ar_size_i   ( mst_dram_req.ar.size   ),
+    .slv_ar_burst_i  ( mst_dram_req.ar.burst  ),
+    .slv_ar_lock_i   ( mst_dram_req.ar.lock   ),
+    .slv_ar_cache_i  ( mst_dram_req.ar.cache  ),
+    .slv_ar_qos_i    ( mst_dram_req.ar.qos    ),
+    .slv_ar_user_i   ( mst_dram_req.ar.user   ),
+    .slv_ar_valid_i  ( mst_dram_req.ar_valid  ),
+    .slv_ar_ready_o  ( mst_dram_rsp.ar_ready  ),
+
+    .slv_w_data_i    ( mst_dram_req.w.data    ),
+    .slv_w_strb_i    ( mst_dram_req.w.strb    ),
+    .slv_w_user_i    ( mst_dram_req.w.user    ),
+    .slv_w_last_i    ( mst_dram_req.w.last    ),
+    .slv_w_valid_i   ( mst_dram_req.w_valid   ),
+    .slv_w_ready_o   ( mst_dram_rsp.w_ready   ),
+
+    .slv_r_id_o      ( mst_dram_rsp.r.id      ),
+    .slv_r_data_o    ( mst_dram_rsp.r.data    ),
+    .slv_r_resp_o    ( mst_dram_rsp.r.resp    ),
+    .slv_r_last_o    ( mst_dram_rsp.r.last    ),
+    .slv_r_user_o    ( mst_dram_rsp.r.user    ),
+    .slv_r_valid_o   ( mst_dram_rsp.r_valid   ),
+    .slv_r_ready_i   ( mst_dram_req.r_ready   ),
+
+    .slv_b_id_o      ( mst_dram_rsp.b.id      ),
+    .slv_b_resp_o    ( mst_dram_rsp.b.resp    ),
+    .slv_b_user_o    ( mst_dram_rsp.b.user    ),
+    .slv_b_valid_o   ( mst_dram_rsp.b_valid   ),
+    .slv_b_ready_i   ( mst_dram_req.b_ready   ),
+
+    .mst_aw_id_o     ( llc_req.aw.id     ),
+    .mst_aw_addr_o   ( llc_req.aw.addr   ),
+    .mst_aw_prot_o   ( llc_req.aw.prot   ),
+    .mst_aw_region_o ( llc_req.aw.region ),
+    .mst_aw_atop_o   ( llc_req.aw.atop   ),
+    .mst_aw_len_o    ( llc_req.aw.len    ),
+    .mst_aw_size_o   ( llc_req.aw.size   ),
+    .mst_aw_burst_o  ( llc_req.aw.burst  ),
+    .mst_aw_lock_o   ( llc_req.aw.lock   ),
+    .mst_aw_cache_o  ( llc_req.aw.cache  ),
+    .mst_aw_qos_o    ( llc_req.aw.qos    ),
+    .mst_aw_user_o   ( llc_req.aw.user   ),
+    .mst_aw_valid_o  ( llc_req.aw_valid  ),
+    .mst_aw_ready_i  ( llc_resp.aw_ready ),
+
+    .mst_ar_id_o     ( llc_req.ar.id     ),
+    .mst_ar_addr_o   ( llc_req.ar.addr   ),
+    .mst_ar_prot_o   ( llc_req.ar.prot   ),
+    .mst_ar_region_o ( llc_req.ar.region ),
+    .mst_ar_len_o    ( llc_req.ar.len    ),
+    .mst_ar_size_o   ( llc_req.ar.size   ),
+    .mst_ar_burst_o  ( llc_req.ar.burst  ),
+    .mst_ar_lock_o   ( llc_req.ar.lock   ),
+    .mst_ar_cache_o  ( llc_req.ar.cache  ),
+    .mst_ar_qos_o    ( llc_req.ar.qos    ),
+    .mst_ar_user_o   ( llc_req.ar.user   ),
+    .mst_ar_valid_o  ( llc_req.ar_valid  ),
+    .mst_ar_ready_i  ( llc_resp.ar_ready ),
+
+    .mst_w_data_o    ( llc_req.w.data    ),
+    .mst_w_strb_o    ( llc_req.w.strb    ),
+    .mst_w_last_o    ( llc_req.w.last    ),
+    .mst_w_user_o    ( llc_req.w.user    ),
+    .mst_w_valid_o   ( llc_req.w_valid   ),
+    .mst_w_ready_i   ( llc_resp.w_ready  ),
+
+    .mst_r_id_i      ( llc_resp.r.id     ),
+    .mst_r_data_i    ( llc_resp.r.data   ),
+    .mst_r_resp_i    ( llc_resp.r.resp   ),
+    .mst_r_last_i    ( llc_resp.r.last   ),
+    .mst_r_user_i    ( llc_resp.r.user   ),
+    .mst_r_valid_i   ( llc_resp.r_valid  ),
+    .mst_r_ready_o   ( llc_req.r_ready   ),
+
+    .mst_b_id_i      ( llc_resp.b.id     ),
+    .mst_b_resp_i    ( llc_resp.b.resp   ),
+    .mst_b_user_i    ( llc_resp.b.user   ),
+    .mst_b_valid_i   ( llc_resp.b_valid  ),
+    .mst_b_ready_o   ( llc_req.b_ready   )
 );
+
+// axi_riscv_atomics_wrap #(
+//     .AXI_ADDR_WIDTH ( AxiAddrWidth     ),
+//     .AXI_DATA_WIDTH ( AxiDataWidth     ),
+//     .AXI_ID_WIDTH   ( AxiIdWidthSlaves ),
+//     .AXI_USER_WIDTH ( AxiUserWidth     ),
+//     .AXI_MAX_WRITE_TXNS ( 1  ),
+//     .RISCV_WORD_WIDTH   ( 64 )
+// ) i_axi_riscv_atomics (
+//     .clk_i  ( clk                      ),
+//     .rst_ni ( ndmreset_n               ),
+//     .slv    ( master[ariane_soc::DRAM] ),
+//     .mst    ( dram                     )
+// );
+
+ariane_axi_soc::req_llc_t   dram_req;
+ariane_axi_soc::resp_llc_t  dram_resp;
+
+// TODO: Add a LLC bypass logic here. Notice LLC needs 1 more ID width
+// assign dram_req = llc_req;
+// assign llc_resp = dram_resp;
+
+// convert config signals for llc from AXI to register interface
+// reg*: register interface signals
+// llc*: AXI slave type signals
+
+reg_a32_d32_req_t reg_conf_req;
+reg_a32_d32_rsp_t reg_conf_resp;
+
+ariane_axi_soc::req_t   llc_conf_req;
+ariane_axi_soc::resp_t  llc_conf_resp;
+
+`AXI_ASSIGN_TO_REQ(llc_conf_req, master[ariane_soc::LLCCfg])
+`AXI_ASSIGN_FROM_RESP(master[ariane_soc::LLCCfg], llc_conf_resp)
+
+// axi2reg interface
+axi_to_reg #(
+    .ADDR_WIDTH         ( REG_BUS_ADDR_WIDTH         ),
+    .DATA_WIDTH         ( REG_BUS_DATA_WIDTH         ),
+    .ID_WIDTH           ( AxiIdWidthSlaves  ),
+    .USER_WIDTH         ( AxiUserWidth             ),
+    .AXI_MAX_WRITE_TXNS ( 32'd2                      ),
+    .AXI_MAX_READ_TXNS  ( 32'd2                      ),
+    .DECOUPLE_W         ( 1                          ),
+    .axi_req_t          ( ariane_axi_soc::req_t      ),
+    .axi_rsp_t          ( ariane_axi_soc::resp_t     ),
+    .reg_req_t          ( reg_a32_d32_req_t          ),
+    .reg_rsp_t          ( reg_a32_d32_rsp_t          )
+    ) i_axi_to_reg (
+    .clk_i      ( clk_i           ),
+    .rst_ni     ( rst_ni          ),
+    .testmode_i ( test_en         ),
+    .axi_req_i  ( llc_conf_req    ),
+    .axi_rsp_o  ( llc_conf_resp   ),
+    .reg_req_o  ( reg_conf_req    ),
+    .reg_rsp_i  ( reg_conf_resp   )
+);
+
+// TODO: parameterize the llc
+axi_llc_reg_wrap #(
+    .SetAssociativity ( 8                               ),
+    .NumLines         ( 256                             ),
+    .NumBlocks        ( 8                               ),
+    .MaxThread        ( 256                             ),
+    .AxiIdWidth       ( AxiIdWidthSlaves       ),
+    .AxiAddrWidth     ( AxiAddrWidth               ),
+    .AxiDataWidth     ( AxiDataWidth                  ),
+    .AxiUserWidth     ( AxiUserWidth                  ),
+    .slv_req_t        ( ariane_axi_soc::req_slv_t       ),
+    .slv_resp_t       ( ariane_axi_soc::resp_slv_t      ),
+    .mst_req_t        ( ariane_axi_soc::req_llc_t       ),
+    .mst_resp_t       ( ariane_axi_soc::resp_llc_t      ),
+    .reg_req_t        ( reg_a32_d32_req_t               ),
+    .reg_resp_t       ( reg_a32_d32_rsp_t               ),
+    .rule_full_t      ( axi_pkg::xbar_rule_64_t         )
+    ) i_axi_llc (
+    .clk_i               ( clk_i                                  ),
+    .rst_ni              ( ndmreset_n                             ),
+    .test_i              ( test_en                                ),
+    .slv_req_i           ( llc_req                                ),
+    .slv_resp_o          ( llc_resp                               ),
+    .mst_req_o           ( dram_req                               ),
+    .mst_resp_i          ( dram_resp                              ),
+    .conf_req_i          ( reg_conf_req                           ),
+    .conf_resp_o         ( reg_conf_resp                          ),
+    .cached_start_addr_i ( ariane_soc::DRAMBase                           ),
+    .cached_end_addr_i   ( ariane_soc::DRAMBase  + ariane_soc::DRAMLength ),
+    .spm_start_addr_i    ( ariane_soc::LLCSpmBase                 ),
+    .axi_llc_events_o    (                                        )   // not use it currently
+);
+
+AXI_BUS #(
+    .AXI_ADDR_WIDTH ( AxiAddrWidth        ),
+    .AXI_DATA_WIDTH ( AxiDataWidth           ),
+    .AXI_ID_WIDTH   ( AxiIdWidthSlaves+1),
+    .AXI_USER_WIDTH ( AxiUserWidth           )
+) dram_delayed();
+
+AXI_BUS #(
+    .AXI_ADDR_WIDTH ( AxiAddrWidth        ),
+    .AXI_DATA_WIDTH ( AxiDataWidth           ),
+    .AXI_ID_WIDTH   ( AxiIdWidthSlaves+1),
+    .AXI_USER_WIDTH ( AxiUserWidth           )
+) llc_to_dram();
+
+
+// delay the request to dram to simulate the real situation
+`AXI_ASSIGN_FROM_REQ(llc_to_dram, dram_req)
+`AXI_ASSIGN_TO_RESP(dram_resp, llc_to_dram)
+
+// // TODO: do we need delay module here?
+// axi_delayer_intf #(
+//     .AXI_ID_WIDTH        ( AxiIdWidthSlaves+1),
+//     .AXI_ADDR_WIDTH      ( AxiAddrWidth        ),
+//     .AXI_DATA_WIDTH      ( AxiDataWidth           ),
+//     .AXI_USER_WIDTH      ( AxiUserWidth           ),
+//     .STALL_RANDOM_INPUT  ( StallRandomInput         ),
+//     .STALL_RANDOM_OUTPUT ( StallRandomOutput        ),
+//     .FIXED_DELAY_INPUT   ( 0                        ),
+//     .FIXED_DELAY_OUTPUT  ( 0                        )
+// ) i_axi_delayer (
+//     .clk_i  ( clk_i        ),
+//     .rst_ni ( ndmreset_n   ),
+//     .slv    ( llc_to_dram  ),
+//     .mst    ( dram_delayed )
+// );
+
+ariane_axi_soc::req_t  llc_to_dram_req,  dram_delayed_req;
+ariane_axi_soc::resp_t llc_to_dram_resp, dram_delayed_resp;
+
+`AXI_ASSIGN_TO_REQ(llc_to_dram_req, llc_to_dram)
+`AXI_ASSIGN_FROM_RESP(llc_to_dram, llc_to_dram_resp)
+
+assign dram_delayed_req = llc_to_dram_req;
+assign llc_to_dram_resp = dram_delayed_resp;
+
+`AXI_ASSIGN_FROM_REQ(dram_delayed, dram_delayed_req)
+`AXI_ASSIGN_TO_RESP(dram_delayed_resp, dram_delayed)
+
 
 `ifdef PROTOCOL_CHECKER
 logic pc_status;
@@ -1175,98 +1422,98 @@ xlnx_protocol_checker i_xlnx_protocol_checker (
   .pc_asserted(pc_status),
   .aclk(clk),
   .aresetn(ndmreset_n),
-  .pc_axi_awid     (dram.aw_id),
-  .pc_axi_awaddr   (dram.aw_addr),
-  .pc_axi_awlen    (dram.aw_len),
-  .pc_axi_awsize   (dram.aw_size),
-  .pc_axi_awburst  (dram.aw_burst),
-  .pc_axi_awlock   (dram.aw_lock),
-  .pc_axi_awcache  (dram.aw_cache),
-  .pc_axi_awprot   (dram.aw_prot),
-  .pc_axi_awqos    (dram.aw_qos),
-  .pc_axi_awregion (dram.aw_region),
-  .pc_axi_awuser   (dram.aw_user),
-  .pc_axi_awvalid  (dram.aw_valid),
-  .pc_axi_awready  (dram.aw_ready),
-  .pc_axi_wlast    (dram.w_last),
-  .pc_axi_wdata    (dram.w_data),
-  .pc_axi_wstrb    (dram.w_strb),
-  .pc_axi_wuser    (dram.w_user),
-  .pc_axi_wvalid   (dram.w_valid),
-  .pc_axi_wready   (dram.w_ready),
-  .pc_axi_bid      (dram.b_id),
-  .pc_axi_bresp    (dram.b_resp),
-  .pc_axi_buser    (dram.b_user),
-  .pc_axi_bvalid   (dram.b_valid),
-  .pc_axi_bready   (dram.b_ready),
-  .pc_axi_arid     (dram.ar_id),
-  .pc_axi_araddr   (dram.ar_addr),
-  .pc_axi_arlen    (dram.ar_len),
-  .pc_axi_arsize   (dram.ar_size),
-  .pc_axi_arburst  (dram.ar_burst),
-  .pc_axi_arlock   (dram.ar_lock),
-  .pc_axi_arcache  (dram.ar_cache),
-  .pc_axi_arprot   (dram.ar_prot),
-  .pc_axi_arqos    (dram.ar_qos),
-  .pc_axi_arregion (dram.ar_region),
-  .pc_axi_aruser   (dram.ar_user),
-  .pc_axi_arvalid  (dram.ar_valid),
-  .pc_axi_arready  (dram.ar_ready),
-  .pc_axi_rid      (dram.r_id),
-  .pc_axi_rlast    (dram.r_last),
-  .pc_axi_rdata    (dram.r_data),
-  .pc_axi_rresp    (dram.r_resp),
-  .pc_axi_ruser    (dram.r_user),
-  .pc_axi_rvalid   (dram.r_valid),
-  .pc_axi_rready   (dram.r_ready)
+  .pc_axi_awid     (dram_delayed.aw_id),
+  .pc_axi_awaddr   (dram_delayed.aw_addr),
+  .pc_axi_awlen    (dram_delayed.aw_len),
+  .pc_axi_awsize   (dram_delayed.aw_size),
+  .pc_axi_awburst  (dram_delayed.aw_burst),
+  .pc_axi_awlock   (dram_delayed.aw_lock),
+  .pc_axi_awcache  (dram_delayed.aw_cache),
+  .pc_axi_awprot   (dram_delayed.aw_prot),
+  .pc_axi_awqos    (dram_delayed.aw_qos),
+  .pc_axi_awregion (dram_delayed.aw_region),
+  .pc_axi_awuser   (dram_delayed.aw_user),
+  .pc_axi_awvalid  (dram_delayed.aw_valid),
+  .pc_axi_awready  (dram_delayed.aw_ready),
+  .pc_axi_wlast    (dram_delayed.w_last),
+  .pc_axi_wdata    (dram_delayed.w_data),
+  .pc_axi_wstrb    (dram_delayed.w_strb),
+  .pc_axi_wuser    (dram_delayed.w_user),
+  .pc_axi_wvalid   (dram_delayed.w_valid),
+  .pc_axi_wready   (dram_delayed.w_ready),
+  .pc_axi_bid      (dram_delayed.b_id),
+  .pc_axi_bresp    (dram_delayed.b_resp),
+  .pc_axi_buser    (dram_delayed.b_user),
+  .pc_axi_bvalid   (dram_delayed.b_valid),
+  .pc_axi_bready   (dram_delayed.b_ready),
+  .pc_axi_arid     (dram_delayed.ar_id),
+  .pc_axi_araddr   (dram_delayed.ar_addr),
+  .pc_axi_arlen    (dram_delayed.ar_len),
+  .pc_axi_arsize   (dram_delayed.ar_size),
+  .pc_axi_arburst  (dram_delayed.ar_burst),
+  .pc_axi_arlock   (dram_delayed.ar_lock),
+  .pc_axi_arcache  (dram_delayed.ar_cache),
+  .pc_axi_arprot   (dram_delayed.ar_prot),
+  .pc_axi_arqos    (dram_delayed.ar_qos),
+  .pc_axi_arregion (dram_delayed.ar_region),
+  .pc_axi_aruser   (dram_delayed.ar_user),
+  .pc_axi_arvalid  (dram_delayed.ar_valid),
+  .pc_axi_arready  (dram_delayed.ar_ready),
+  .pc_axi_rid      (dram_delayed.r_id),
+  .pc_axi_rlast    (dram_delayed.r_last),
+  .pc_axi_rdata    (dram_delayed.r_data),
+  .pc_axi_rresp    (dram_delayed.r_resp),
+  .pc_axi_ruser    (dram_delayed.r_user),
+  .pc_axi_rvalid   (dram_delayed.r_valid),
+  .pc_axi_rready   (dram_delayed.r_ready)
 );
 `endif
 
-assign dram.r_user = '0;
-assign dram.b_user = '0;
+// assign dram.r_user = '0;
+// assign dram.b_user = '0;
 
 xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_aclk     ( clk              ),
   .s_axi_aresetn  ( ndmreset_n       ),
-  .s_axi_awid     ( dram.aw_id       ),
-  .s_axi_awaddr   ( dram.aw_addr     ),
-  .s_axi_awlen    ( dram.aw_len      ),
-  .s_axi_awsize   ( dram.aw_size     ),
-  .s_axi_awburst  ( dram.aw_burst    ),
-  .s_axi_awlock   ( dram.aw_lock     ),
-  .s_axi_awcache  ( dram.aw_cache    ),
-  .s_axi_awprot   ( dram.aw_prot     ),
-  .s_axi_awregion ( dram.aw_region   ),
-  .s_axi_awqos    ( dram.aw_qos      ),
-  .s_axi_awvalid  ( dram.aw_valid    ),
-  .s_axi_awready  ( dram.aw_ready    ),
-  .s_axi_wdata    ( dram.w_data      ),
-  .s_axi_wstrb    ( dram.w_strb      ),
-  .s_axi_wlast    ( dram.w_last      ),
-  .s_axi_wvalid   ( dram.w_valid     ),
-  .s_axi_wready   ( dram.w_ready     ),
-  .s_axi_bid      ( dram.b_id        ),
-  .s_axi_bresp    ( dram.b_resp      ),
-  .s_axi_bvalid   ( dram.b_valid     ),
-  .s_axi_bready   ( dram.b_ready     ),
-  .s_axi_arid     ( dram.ar_id       ),
-  .s_axi_araddr   ( dram.ar_addr     ),
-  .s_axi_arlen    ( dram.ar_len      ),
-  .s_axi_arsize   ( dram.ar_size     ),
-  .s_axi_arburst  ( dram.ar_burst    ),
-  .s_axi_arlock   ( dram.ar_lock     ),
-  .s_axi_arcache  ( dram.ar_cache    ),
-  .s_axi_arprot   ( dram.ar_prot     ),
-  .s_axi_arregion ( dram.ar_region   ),
-  .s_axi_arqos    ( dram.ar_qos      ),
-  .s_axi_arvalid  ( dram.ar_valid    ),
-  .s_axi_arready  ( dram.ar_ready    ),
-  .s_axi_rid      ( dram.r_id        ),
-  .s_axi_rdata    ( dram.r_data      ),
-  .s_axi_rresp    ( dram.r_resp      ),
-  .s_axi_rlast    ( dram.r_last      ),
-  .s_axi_rvalid   ( dram.r_valid     ),
-  .s_axi_rready   ( dram.r_ready     ),
+  .s_axi_awid     ( dram_delayed.aw_id       ),
+  .s_axi_awaddr   ( dram_delayed.aw_addr     ),
+  .s_axi_awlen    ( dram_delayed.aw_len      ),
+  .s_axi_awsize   ( dram_delayed.aw_size     ),
+  .s_axi_awburst  ( dram_delayed.aw_burst    ),
+  .s_axi_awlock   ( dram_delayed.aw_lock     ),
+  .s_axi_awcache  ( dram_delayed.aw_cache    ),
+  .s_axi_awprot   ( dram_delayed.aw_prot     ),
+  .s_axi_awregion ( dram_delayed.aw_region   ),
+  .s_axi_awqos    ( dram_delayed.aw_qos      ),
+  .s_axi_awvalid  ( dram_delayed.aw_valid    ),
+  .s_axi_awready  ( dram_delayed.aw_ready    ),
+  .s_axi_wdata    ( dram_delayed.w_data      ),
+  .s_axi_wstrb    ( dram_delayed.w_strb      ),
+  .s_axi_wlast    ( dram_delayed.w_last      ),
+  .s_axi_wvalid   ( dram_delayed.w_valid     ),
+  .s_axi_wready   ( dram_delayed.w_ready     ),
+  .s_axi_bid      ( dram_delayed.b_id        ),
+  .s_axi_bresp    ( dram_delayed.b_resp      ),
+  .s_axi_bvalid   ( dram_delayed.b_valid     ),
+  .s_axi_bready   ( dram_delayed.b_ready     ),
+  .s_axi_arid     ( dram_delayed.ar_id       ),
+  .s_axi_araddr   ( dram_delayed.ar_addr     ),
+  .s_axi_arlen    ( dram_delayed.ar_len      ),
+  .s_axi_arsize   ( dram_delayed.ar_size     ),
+  .s_axi_arburst  ( dram_delayed.ar_burst    ),
+  .s_axi_arlock   ( dram_delayed.ar_lock     ),
+  .s_axi_arcache  ( dram_delayed.ar_cache    ),
+  .s_axi_arprot   ( dram_delayed.ar_prot     ),
+  .s_axi_arregion ( dram_delayed.ar_region   ),
+  .s_axi_arqos    ( dram_delayed.ar_qos      ),
+  .s_axi_arvalid  ( dram_delayed.ar_valid    ),
+  .s_axi_arready  ( dram_delayed.ar_ready    ),
+  .s_axi_rid      ( dram_delayed.r_id        ),
+  .s_axi_rdata    ( dram_delayed.r_data      ),
+  .s_axi_rresp    ( dram_delayed.r_resp      ),
+  .s_axi_rlast    ( dram_delayed.r_last      ),
+  .s_axi_rvalid   ( dram_delayed.r_valid     ),
+  .s_axi_rready   ( dram_delayed.r_ready     ),
   // to size converter
   .m_axi_aclk     ( ddr_clock_out    ),
   .m_axi_aresetn  ( ndmreset_n       ),
@@ -1321,7 +1568,7 @@ xlnx_clk_gen i_xlnx_clk_gen (
   .clk_in1  ( ddr_clock_out )
 );
 
-`ifdef KINTEX7
+// `ifdef KINTEX7
 fan_ctrl i_fan_ctrl (
     .clk_i         ( clk        ),
     .rst_ni        ( ndmreset_n ),
@@ -1398,597 +1645,597 @@ xlnx_mig_7_ddr3 i_ddr (
     .device_temp         (            ), // keep open
     .sys_rst             ( cpu_resetn )
 );
-`elsif VC707
-fan_ctrl i_fan_ctrl (
-    .clk_i         ( clk        ),
-    .rst_ni        ( ndmreset_n ),
-    .pwm_setting_i ( '1         ),
-    .fan_pwm_o     ( fan_pwm    )
-);
+// `elsif VC707
+// fan_ctrl i_fan_ctrl (
+//     .clk_i         ( clk        ),
+//     .rst_ni        ( ndmreset_n ),
+//     .pwm_setting_i ( '1         ),
+//     .fan_pwm_o     ( fan_pwm    )
+// );
 
-xlnx_mig_7_ddr3 i_ddr (
-    .sys_clk_p,
-    .sys_clk_n,
-    .ddr3_dq,
-    .ddr3_dqs_n,
-    .ddr3_dqs_p,
-    .ddr3_addr,
-    .ddr3_ba,
-    .ddr3_ras_n,
-    .ddr3_cas_n,
-    .ddr3_we_n,
-    .ddr3_reset_n,
-    .ddr3_ck_p,
-    .ddr3_ck_n,
-    .ddr3_cke,
-    .ddr3_cs_n,
-    .ddr3_dm,
-    .ddr3_odt,
-    .mmcm_locked     (                ), // keep open
-    .app_sr_req      ( '0             ),
-    .app_ref_req     ( '0             ),
-    .app_zq_req      ( '0             ),
-    .app_sr_active   (                ), // keep open
-    .app_ref_ack     (                ), // keep open
-    .app_zq_ack      (                ), // keep open
-    .ui_clk          ( ddr_clock_out  ),
-    .ui_clk_sync_rst ( ddr_sync_reset ),
-    .aresetn         ( ndmreset_n     ),
-    .s_axi_awid,
-    .s_axi_awaddr    ( s_axi_awaddr[29:0] ),
-    .s_axi_awlen,
-    .s_axi_awsize,
-    .s_axi_awburst,
-    .s_axi_awlock,
-    .s_axi_awcache,
-    .s_axi_awprot,
-    .s_axi_awqos,
-    .s_axi_awvalid,
-    .s_axi_awready,
-    .s_axi_wdata,
-    .s_axi_wstrb,
-    .s_axi_wlast,
-    .s_axi_wvalid,
-    .s_axi_wready,
-    .s_axi_bready,
-    .s_axi_bid,
-    .s_axi_bresp,
-    .s_axi_bvalid,
-    .s_axi_arid,
-    .s_axi_araddr     ( s_axi_araddr[29:0] ),
-    .s_axi_arlen,
-    .s_axi_arsize,
-    .s_axi_arburst,
-    .s_axi_arlock,
-    .s_axi_arcache,
-    .s_axi_arprot,
-    .s_axi_arqos,
-    .s_axi_arvalid,
-    .s_axi_arready,
-    .s_axi_rready,
-    .s_axi_rid,
-    .s_axi_rdata,
-    .s_axi_rresp,
-    .s_axi_rlast,
-    .s_axi_rvalid,
-    .init_calib_complete (            ), // keep open
-    .device_temp         (            ), // keep open
-    .sys_rst             ( cpu_resetn )
-);
-`elsif VCU118
+// xlnx_mig_7_ddr3 i_ddr (
+//     .sys_clk_p,
+//     .sys_clk_n,
+//     .ddr3_dq,
+//     .ddr3_dqs_n,
+//     .ddr3_dqs_p,
+//     .ddr3_addr,
+//     .ddr3_ba,
+//     .ddr3_ras_n,
+//     .ddr3_cas_n,
+//     .ddr3_we_n,
+//     .ddr3_reset_n,
+//     .ddr3_ck_p,
+//     .ddr3_ck_n,
+//     .ddr3_cke,
+//     .ddr3_cs_n,
+//     .ddr3_dm,
+//     .ddr3_odt,
+//     .mmcm_locked     (                ), // keep open
+//     .app_sr_req      ( '0             ),
+//     .app_ref_req     ( '0             ),
+//     .app_zq_req      ( '0             ),
+//     .app_sr_active   (                ), // keep open
+//     .app_ref_ack     (                ), // keep open
+//     .app_zq_ack      (                ), // keep open
+//     .ui_clk          ( ddr_clock_out  ),
+//     .ui_clk_sync_rst ( ddr_sync_reset ),
+//     .aresetn         ( ndmreset_n     ),
+//     .s_axi_awid,
+//     .s_axi_awaddr    ( s_axi_awaddr[29:0] ),
+//     .s_axi_awlen,
+//     .s_axi_awsize,
+//     .s_axi_awburst,
+//     .s_axi_awlock,
+//     .s_axi_awcache,
+//     .s_axi_awprot,
+//     .s_axi_awqos,
+//     .s_axi_awvalid,
+//     .s_axi_awready,
+//     .s_axi_wdata,
+//     .s_axi_wstrb,
+//     .s_axi_wlast,
+//     .s_axi_wvalid,
+//     .s_axi_wready,
+//     .s_axi_bready,
+//     .s_axi_bid,
+//     .s_axi_bresp,
+//     .s_axi_bvalid,
+//     .s_axi_arid,
+//     .s_axi_araddr     ( s_axi_araddr[29:0] ),
+//     .s_axi_arlen,
+//     .s_axi_arsize,
+//     .s_axi_arburst,
+//     .s_axi_arlock,
+//     .s_axi_arcache,
+//     .s_axi_arprot,
+//     .s_axi_arqos,
+//     .s_axi_arvalid,
+//     .s_axi_arready,
+//     .s_axi_rready,
+//     .s_axi_rid,
+//     .s_axi_rdata,
+//     .s_axi_rresp,
+//     .s_axi_rlast,
+//     .s_axi_rvalid,
+//     .init_calib_complete (            ), // keep open
+//     .device_temp         (            ), // keep open
+//     .sys_rst             ( cpu_resetn )
+// );
+// `elsif VCU118
 
-  logic [63:0]  dram_dwidth_axi_awaddr;
-  logic [7:0]   dram_dwidth_axi_awlen;
-  logic [2:0]   dram_dwidth_axi_awsize;
-  logic [1:0]   dram_dwidth_axi_awburst;
-  logic [0:0]   dram_dwidth_axi_awlock;
-  logic [3:0]   dram_dwidth_axi_awcache;
-  logic [2:0]   dram_dwidth_axi_awprot;
-  logic [3:0]   dram_dwidth_axi_awqos;
-  logic         dram_dwidth_axi_awvalid;
-  logic         dram_dwidth_axi_awready;
-  logic [511:0] dram_dwidth_axi_wdata;
-  logic [63:0]  dram_dwidth_axi_wstrb;
-  logic         dram_dwidth_axi_wlast;
-  logic         dram_dwidth_axi_wvalid;
-  logic         dram_dwidth_axi_wready;
-  logic         dram_dwidth_axi_bready;
-  logic [1:0]   dram_dwidth_axi_bresp;
-  logic         dram_dwidth_axi_bvalid;
-  logic [63:0]  dram_dwidth_axi_araddr;
-  logic [7:0]   dram_dwidth_axi_arlen;
-  logic [2:0]   dram_dwidth_axi_arsize;
-  logic [1:0]   dram_dwidth_axi_arburst;
-  logic [0:0]   dram_dwidth_axi_arlock;
-  logic [3:0]   dram_dwidth_axi_arcache;
-  logic [2:0]   dram_dwidth_axi_arprot;
-  logic [3:0]   dram_dwidth_axi_arqos;
-  logic         dram_dwidth_axi_arvalid;
-  logic         dram_dwidth_axi_arready;
-  logic         dram_dwidth_axi_rready;
-  logic         dram_dwidth_axi_rlast;
-  logic         dram_dwidth_axi_rvalid;
-  logic [1:0]   dram_dwidth_axi_rresp;
-  logic [511:0] dram_dwidth_axi_rdata;
+//   logic [63:0]  dram_dwidth_axi_awaddr;
+//   logic [7:0]   dram_dwidth_axi_awlen;
+//   logic [2:0]   dram_dwidth_axi_awsize;
+//   logic [1:0]   dram_dwidth_axi_awburst;
+//   logic [0:0]   dram_dwidth_axi_awlock;
+//   logic [3:0]   dram_dwidth_axi_awcache;
+//   logic [2:0]   dram_dwidth_axi_awprot;
+//   logic [3:0]   dram_dwidth_axi_awqos;
+//   logic         dram_dwidth_axi_awvalid;
+//   logic         dram_dwidth_axi_awready;
+//   logic [511:0] dram_dwidth_axi_wdata;
+//   logic [63:0]  dram_dwidth_axi_wstrb;
+//   logic         dram_dwidth_axi_wlast;
+//   logic         dram_dwidth_axi_wvalid;
+//   logic         dram_dwidth_axi_wready;
+//   logic         dram_dwidth_axi_bready;
+//   logic [1:0]   dram_dwidth_axi_bresp;
+//   logic         dram_dwidth_axi_bvalid;
+//   logic [63:0]  dram_dwidth_axi_araddr;
+//   logic [7:0]   dram_dwidth_axi_arlen;
+//   logic [2:0]   dram_dwidth_axi_arsize;
+//   logic [1:0]   dram_dwidth_axi_arburst;
+//   logic [0:0]   dram_dwidth_axi_arlock;
+//   logic [3:0]   dram_dwidth_axi_arcache;
+//   logic [2:0]   dram_dwidth_axi_arprot;
+//   logic [3:0]   dram_dwidth_axi_arqos;
+//   logic         dram_dwidth_axi_arvalid;
+//   logic         dram_dwidth_axi_arready;
+//   logic         dram_dwidth_axi_rready;
+//   logic         dram_dwidth_axi_rlast;
+//   logic         dram_dwidth_axi_rvalid;
+//   logic [1:0]   dram_dwidth_axi_rresp;
+//   logic [511:0] dram_dwidth_axi_rdata;
 
-axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
-  .s_axi_aclk     ( ddr_clock_out            ),
-  .s_axi_aresetn  ( ndmreset_n               ),
+// axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
+//   .s_axi_aclk     ( ddr_clock_out            ),
+//   .s_axi_aresetn  ( ndmreset_n               ),
 
-  .s_axi_awid     ( s_axi_awid               ),
-  .s_axi_awaddr   ( s_axi_awaddr             ),
-  .s_axi_awlen    ( s_axi_awlen              ),
-  .s_axi_awsize   ( s_axi_awsize             ),
-  .s_axi_awburst  ( s_axi_awburst            ),
-  .s_axi_awlock   ( s_axi_awlock             ),
-  .s_axi_awcache  ( s_axi_awcache            ),
-  .s_axi_awprot   ( s_axi_awprot             ),
-  .s_axi_awregion ( '0                       ),
-  .s_axi_awqos    ( s_axi_awqos              ),
-  .s_axi_awvalid  ( s_axi_awvalid            ),
-  .s_axi_awready  ( s_axi_awready            ),
-  .s_axi_wdata    ( s_axi_wdata              ),
-  .s_axi_wstrb    ( s_axi_wstrb              ),
-  .s_axi_wlast    ( s_axi_wlast              ),
-  .s_axi_wvalid   ( s_axi_wvalid             ),
-  .s_axi_wready   ( s_axi_wready             ),
-  .s_axi_bid      ( s_axi_bid                ),
-  .s_axi_bresp    ( s_axi_bresp              ),
-  .s_axi_bvalid   ( s_axi_bvalid             ),
-  .s_axi_bready   ( s_axi_bready             ),
-  .s_axi_arid     ( s_axi_arid               ),
-  .s_axi_araddr   ( s_axi_araddr             ),
-  .s_axi_arlen    ( s_axi_arlen              ),
-  .s_axi_arsize   ( s_axi_arsize             ),
-  .s_axi_arburst  ( s_axi_arburst            ),
-  .s_axi_arlock   ( s_axi_arlock             ),
-  .s_axi_arcache  ( s_axi_arcache            ),
-  .s_axi_arprot   ( s_axi_arprot             ),
-  .s_axi_arregion ( '0                       ),
-  .s_axi_arqos    ( s_axi_arqos              ),
-  .s_axi_arvalid  ( s_axi_arvalid            ),
-  .s_axi_arready  ( s_axi_arready            ),
-  .s_axi_rid      ( s_axi_rid                ),
-  .s_axi_rdata    ( s_axi_rdata              ),
-  .s_axi_rresp    ( s_axi_rresp              ),
-  .s_axi_rlast    ( s_axi_rlast              ),
-  .s_axi_rvalid   ( s_axi_rvalid             ),
-  .s_axi_rready   ( s_axi_rready             ),
+//   .s_axi_awid     ( s_axi_awid               ),
+//   .s_axi_awaddr   ( s_axi_awaddr             ),
+//   .s_axi_awlen    ( s_axi_awlen              ),
+//   .s_axi_awsize   ( s_axi_awsize             ),
+//   .s_axi_awburst  ( s_axi_awburst            ),
+//   .s_axi_awlock   ( s_axi_awlock             ),
+//   .s_axi_awcache  ( s_axi_awcache            ),
+//   .s_axi_awprot   ( s_axi_awprot             ),
+//   .s_axi_awregion ( '0                       ),
+//   .s_axi_awqos    ( s_axi_awqos              ),
+//   .s_axi_awvalid  ( s_axi_awvalid            ),
+//   .s_axi_awready  ( s_axi_awready            ),
+//   .s_axi_wdata    ( s_axi_wdata              ),
+//   .s_axi_wstrb    ( s_axi_wstrb              ),
+//   .s_axi_wlast    ( s_axi_wlast              ),
+//   .s_axi_wvalid   ( s_axi_wvalid             ),
+//   .s_axi_wready   ( s_axi_wready             ),
+//   .s_axi_bid      ( s_axi_bid                ),
+//   .s_axi_bresp    ( s_axi_bresp              ),
+//   .s_axi_bvalid   ( s_axi_bvalid             ),
+//   .s_axi_bready   ( s_axi_bready             ),
+//   .s_axi_arid     ( s_axi_arid               ),
+//   .s_axi_araddr   ( s_axi_araddr             ),
+//   .s_axi_arlen    ( s_axi_arlen              ),
+//   .s_axi_arsize   ( s_axi_arsize             ),
+//   .s_axi_arburst  ( s_axi_arburst            ),
+//   .s_axi_arlock   ( s_axi_arlock             ),
+//   .s_axi_arcache  ( s_axi_arcache            ),
+//   .s_axi_arprot   ( s_axi_arprot             ),
+//   .s_axi_arregion ( '0                       ),
+//   .s_axi_arqos    ( s_axi_arqos              ),
+//   .s_axi_arvalid  ( s_axi_arvalid            ),
+//   .s_axi_arready  ( s_axi_arready            ),
+//   .s_axi_rid      ( s_axi_rid                ),
+//   .s_axi_rdata    ( s_axi_rdata              ),
+//   .s_axi_rresp    ( s_axi_rresp              ),
+//   .s_axi_rlast    ( s_axi_rlast              ),
+//   .s_axi_rvalid   ( s_axi_rvalid             ),
+//   .s_axi_rready   ( s_axi_rready             ),
 
-  .m_axi_awaddr   ( dram_dwidth_axi_awaddr   ),
-  .m_axi_awlen    ( dram_dwidth_axi_awlen    ),
-  .m_axi_awsize   ( dram_dwidth_axi_awsize   ),
-  .m_axi_awburst  ( dram_dwidth_axi_awburst  ),
-  .m_axi_awlock   ( dram_dwidth_axi_awlock   ),
-  .m_axi_awcache  ( dram_dwidth_axi_awcache  ),
-  .m_axi_awprot   ( dram_dwidth_axi_awprot   ),
-  .m_axi_awregion (                          ), // left open
-  .m_axi_awqos    ( dram_dwidth_axi_awqos    ),
-  .m_axi_awvalid  ( dram_dwidth_axi_awvalid  ),
-  .m_axi_awready  ( dram_dwidth_axi_awready  ),
-  .m_axi_wdata    ( dram_dwidth_axi_wdata    ),
-  .m_axi_wstrb    ( dram_dwidth_axi_wstrb    ),
-  .m_axi_wlast    ( dram_dwidth_axi_wlast    ),
-  .m_axi_wvalid   ( dram_dwidth_axi_wvalid   ),
-  .m_axi_wready   ( dram_dwidth_axi_wready   ),
-  .m_axi_bresp    ( dram_dwidth_axi_bresp    ),
-  .m_axi_bvalid   ( dram_dwidth_axi_bvalid   ),
-  .m_axi_bready   ( dram_dwidth_axi_bready   ),
-  .m_axi_araddr   ( dram_dwidth_axi_araddr   ),
-  .m_axi_arlen    ( dram_dwidth_axi_arlen    ),
-  .m_axi_arsize   ( dram_dwidth_axi_arsize   ),
-  .m_axi_arburst  ( dram_dwidth_axi_arburst  ),
-  .m_axi_arlock   ( dram_dwidth_axi_arlock   ),
-  .m_axi_arcache  ( dram_dwidth_axi_arcache  ),
-  .m_axi_arprot   ( dram_dwidth_axi_arprot   ),
-  .m_axi_arregion (                          ),
-  .m_axi_arqos    ( dram_dwidth_axi_arqos    ),
-  .m_axi_arvalid  ( dram_dwidth_axi_arvalid  ),
-  .m_axi_arready  ( dram_dwidth_axi_arready  ),
-  .m_axi_rdata    ( dram_dwidth_axi_rdata    ),
-  .m_axi_rresp    ( dram_dwidth_axi_rresp    ),
-  .m_axi_rlast    ( dram_dwidth_axi_rlast    ),
-  .m_axi_rvalid   ( dram_dwidth_axi_rvalid   ),
-  .m_axi_rready   ( dram_dwidth_axi_rready   )
-);
+//   .m_axi_awaddr   ( dram_dwidth_axi_awaddr   ),
+//   .m_axi_awlen    ( dram_dwidth_axi_awlen    ),
+//   .m_axi_awsize   ( dram_dwidth_axi_awsize   ),
+//   .m_axi_awburst  ( dram_dwidth_axi_awburst  ),
+//   .m_axi_awlock   ( dram_dwidth_axi_awlock   ),
+//   .m_axi_awcache  ( dram_dwidth_axi_awcache  ),
+//   .m_axi_awprot   ( dram_dwidth_axi_awprot   ),
+//   .m_axi_awregion (                          ), // left open
+//   .m_axi_awqos    ( dram_dwidth_axi_awqos    ),
+//   .m_axi_awvalid  ( dram_dwidth_axi_awvalid  ),
+//   .m_axi_awready  ( dram_dwidth_axi_awready  ),
+//   .m_axi_wdata    ( dram_dwidth_axi_wdata    ),
+//   .m_axi_wstrb    ( dram_dwidth_axi_wstrb    ),
+//   .m_axi_wlast    ( dram_dwidth_axi_wlast    ),
+//   .m_axi_wvalid   ( dram_dwidth_axi_wvalid   ),
+//   .m_axi_wready   ( dram_dwidth_axi_wready   ),
+//   .m_axi_bresp    ( dram_dwidth_axi_bresp    ),
+//   .m_axi_bvalid   ( dram_dwidth_axi_bvalid   ),
+//   .m_axi_bready   ( dram_dwidth_axi_bready   ),
+//   .m_axi_araddr   ( dram_dwidth_axi_araddr   ),
+//   .m_axi_arlen    ( dram_dwidth_axi_arlen    ),
+//   .m_axi_arsize   ( dram_dwidth_axi_arsize   ),
+//   .m_axi_arburst  ( dram_dwidth_axi_arburst  ),
+//   .m_axi_arlock   ( dram_dwidth_axi_arlock   ),
+//   .m_axi_arcache  ( dram_dwidth_axi_arcache  ),
+//   .m_axi_arprot   ( dram_dwidth_axi_arprot   ),
+//   .m_axi_arregion (                          ),
+//   .m_axi_arqos    ( dram_dwidth_axi_arqos    ),
+//   .m_axi_arvalid  ( dram_dwidth_axi_arvalid  ),
+//   .m_axi_arready  ( dram_dwidth_axi_arready  ),
+//   .m_axi_rdata    ( dram_dwidth_axi_rdata    ),
+//   .m_axi_rresp    ( dram_dwidth_axi_rresp    ),
+//   .m_axi_rlast    ( dram_dwidth_axi_rlast    ),
+//   .m_axi_rvalid   ( dram_dwidth_axi_rvalid   ),
+//   .m_axi_rready   ( dram_dwidth_axi_rready   )
+// );
 
-  ddr4_0 i_ddr (
-    .c0_init_calib_complete (                              ),
-    .dbg_clk                (                              ),
-    .c0_sys_clk_p           ( c0_sys_clk_p                 ),
-    .c0_sys_clk_n           ( c0_sys_clk_n                 ),
-    .dbg_bus                (                              ),
-    .c0_ddr4_adr            ( c0_ddr4_adr                  ),
-    .c0_ddr4_ba             ( c0_ddr4_ba                   ),
-    .c0_ddr4_cke            ( c0_ddr4_cke                  ),
-    .c0_ddr4_cs_n           ( c0_ddr4_cs_n                 ),
-    .c0_ddr4_dm_dbi_n       ( c0_ddr4_dm_dbi_n             ),
-    .c0_ddr4_dq             ( c0_ddr4_dq                   ),
-    .c0_ddr4_dqs_c          ( c0_ddr4_dqs_c                ),
-    .c0_ddr4_dqs_t          ( c0_ddr4_dqs_t                ),
-    .c0_ddr4_odt            ( c0_ddr4_odt                  ),
-    .c0_ddr4_bg             ( c0_ddr4_bg                   ),
-    .c0_ddr4_reset_n        ( c0_ddr4_reset_n              ),
-    .c0_ddr4_act_n          ( c0_ddr4_act_n                ),
-    .c0_ddr4_ck_c           ( c0_ddr4_ck_c                 ),
-    .c0_ddr4_ck_t           ( c0_ddr4_ck_t                 ),
-    .c0_ddr4_ui_clk         ( ddr_clock_out                ),
-    .c0_ddr4_ui_clk_sync_rst( ddr_sync_reset               ),
-    .c0_ddr4_aresetn        ( ndmreset_n                   ),
-    .c0_ddr4_s_axi_awid     ( '0                           ),
-    .c0_ddr4_s_axi_awaddr   ( dram_dwidth_axi_awaddr[30:0] ),
-    .c0_ddr4_s_axi_awlen    ( dram_dwidth_axi_awlen        ),
-    .c0_ddr4_s_axi_awsize   ( dram_dwidth_axi_awsize       ),
-    .c0_ddr4_s_axi_awburst  ( dram_dwidth_axi_awburst      ),
-    .c0_ddr4_s_axi_awlock   ( dram_dwidth_axi_awlock       ),
-    .c0_ddr4_s_axi_awcache  ( dram_dwidth_axi_awcache      ),
-    .c0_ddr4_s_axi_awprot   ( dram_dwidth_axi_awprot       ),
-    .c0_ddr4_s_axi_awqos    ( dram_dwidth_axi_awqos        ),
-    .c0_ddr4_s_axi_awvalid  ( dram_dwidth_axi_awvalid      ),
-    .c0_ddr4_s_axi_awready  ( dram_dwidth_axi_awready      ),
-    .c0_ddr4_s_axi_wdata    ( dram_dwidth_axi_wdata        ),
-    .c0_ddr4_s_axi_wstrb    ( dram_dwidth_axi_wstrb        ),
-    .c0_ddr4_s_axi_wlast    ( dram_dwidth_axi_wlast        ),
-    .c0_ddr4_s_axi_wvalid   ( dram_dwidth_axi_wvalid       ),
-    .c0_ddr4_s_axi_wready   ( dram_dwidth_axi_wready       ),
-    .c0_ddr4_s_axi_bready   ( dram_dwidth_axi_bready       ),
-    .c0_ddr4_s_axi_bid      (                              ),
-    .c0_ddr4_s_axi_bresp    ( dram_dwidth_axi_bresp        ),
-    .c0_ddr4_s_axi_bvalid   ( dram_dwidth_axi_bvalid       ),
-    .c0_ddr4_s_axi_arid     ( '0                           ),
-    .c0_ddr4_s_axi_araddr   ( dram_dwidth_axi_araddr[30:0] ),
-    .c0_ddr4_s_axi_arlen    ( dram_dwidth_axi_arlen        ),
-    .c0_ddr4_s_axi_arsize   ( dram_dwidth_axi_arsize       ),
-    .c0_ddr4_s_axi_arburst  ( dram_dwidth_axi_arburst      ),
-    .c0_ddr4_s_axi_arlock   ( dram_dwidth_axi_arlock       ),
-    .c0_ddr4_s_axi_arcache  ( dram_dwidth_axi_arcache      ),
-    .c0_ddr4_s_axi_arprot   ( dram_dwidth_axi_arprot       ),
-    .c0_ddr4_s_axi_arqos    ( dram_dwidth_axi_arqos        ),
-    .c0_ddr4_s_axi_arvalid  ( dram_dwidth_axi_arvalid      ),
-    .c0_ddr4_s_axi_arready  ( dram_dwidth_axi_arready      ),
-    .c0_ddr4_s_axi_rready   ( dram_dwidth_axi_rready       ),
-    .c0_ddr4_s_axi_rlast    ( dram_dwidth_axi_rlast        ),
-    .c0_ddr4_s_axi_rvalid   ( dram_dwidth_axi_rvalid       ),
-    .c0_ddr4_s_axi_rresp    ( dram_dwidth_axi_rresp        ),
-    .c0_ddr4_s_axi_rid      (                              ),
-    .c0_ddr4_s_axi_rdata    ( dram_dwidth_axi_rdata        ),
-    .sys_rst                ( cpu_reset                    )
-  );
-
-
-  logic pcie_ref_clk;
-  logic pcie_ref_clk_gt;
-
-  logic pcie_axi_clk;
-  logic pcie_axi_rstn;
-
-  logic         pcie_axi_awready;
-  logic         pcie_axi_wready;
-  logic [3:0]   pcie_axi_bid;
-  logic [1:0]   pcie_axi_bresp;
-  logic         pcie_axi_bvalid;
-  logic         pcie_axi_arready;
-  logic [3:0]   pcie_axi_rid;
-  logic [255:0] pcie_axi_rdata;
-  logic [1:0]   pcie_axi_rresp;
-  logic         pcie_axi_rlast;
-  logic         pcie_axi_rvalid;
-  logic [3:0]   pcie_axi_awid;
-  logic [63:0]  pcie_axi_awaddr;
-  logic [7:0]   pcie_axi_awlen;
-  logic [2:0]   pcie_axi_awsize;
-  logic [1:0]   pcie_axi_awburst;
-  logic [2:0]   pcie_axi_awprot;
-  logic         pcie_axi_awvalid;
-  logic         pcie_axi_awlock;
-  logic [3:0]   pcie_axi_awcache;
-  logic [255:0] pcie_axi_wdata;
-  logic [31:0]  pcie_axi_wstrb;
-  logic         pcie_axi_wlast;
-  logic         pcie_axi_wvalid;
-  logic         pcie_axi_bready;
-  logic [3:0]   pcie_axi_arid;
-  logic [63:0]  pcie_axi_araddr;
-  logic [7:0]   pcie_axi_arlen;
-  logic [2:0]   pcie_axi_arsize;
-  logic [1:0]   pcie_axi_arburst;
-  logic [2:0]   pcie_axi_arprot;
-  logic         pcie_axi_arvalid;
-  logic         pcie_axi_arlock;
-  logic [3:0]   pcie_axi_arcache;
-  logic         pcie_axi_rready;
-
-  logic [63:0]  pcie_dwidth_axi_awaddr;
-  logic [7:0]   pcie_dwidth_axi_awlen;
-  logic [2:0]   pcie_dwidth_axi_awsize;
-  logic [1:0]   pcie_dwidth_axi_awburst;
-  logic [0:0]   pcie_dwidth_axi_awlock;
-  logic [3:0]   pcie_dwidth_axi_awcache;
-  logic [2:0]   pcie_dwidth_axi_awprot;
-  logic [3:0]   pcie_dwidth_axi_awregion;
-  logic [3:0]   pcie_dwidth_axi_awqos;
-  logic         pcie_dwidth_axi_awvalid;
-  logic         pcie_dwidth_axi_awready;
-  logic [63:0]  pcie_dwidth_axi_wdata;
-  logic [7:0]   pcie_dwidth_axi_wstrb;
-  logic         pcie_dwidth_axi_wlast;
-  logic         pcie_dwidth_axi_wvalid;
-  logic         pcie_dwidth_axi_wready;
-  logic [1:0]   pcie_dwidth_axi_bresp;
-  logic         pcie_dwidth_axi_bvalid;
-  logic         pcie_dwidth_axi_bready;
-  logic [63:0]  pcie_dwidth_axi_araddr;
-  logic [7:0]   pcie_dwidth_axi_arlen;
-  logic [2:0]   pcie_dwidth_axi_arsize;
-  logic [1:0]   pcie_dwidth_axi_arburst;
-  logic [0:0]   pcie_dwidth_axi_arlock;
-  logic [3:0]   pcie_dwidth_axi_arcache;
-  logic [2:0]   pcie_dwidth_axi_arprot;
-  logic [3:0]   pcie_dwidth_axi_arregion;
-  logic [3:0]   pcie_dwidth_axi_arqos;
-  logic         pcie_dwidth_axi_arvalid;
-  logic         pcie_dwidth_axi_arready;
-  logic [63:0]  pcie_dwidth_axi_rdata;
-  logic [1:0]   pcie_dwidth_axi_rresp;
-  logic         pcie_dwidth_axi_rlast;
-  logic         pcie_dwidth_axi_rvalid;
-  logic         pcie_dwidth_axi_rready;
-
-  // PCIe Reset
-  logic sys_rst_n_c;
-  IBUF sys_reset_n_ibuf (.O(sys_rst_n_c), .I(sys_rst_n));
-
-  IBUFDS_GTE4 #(
-    .REFCLK_HROW_CK_SEL ( 2'b00 )
-  ) IBUFDS_GTE4_inst (
-    .O     ( pcie_ref_clk_gt ),
-    .ODIV2 ( pcie_ref_clk    ),
-    .CEB   ( 1'b0            ),
-    .I     ( sys_clk_p       ),
-    .IB    ( sys_clk_n       )
-  );
-
-  // 250 MHz AXI
-  xdma_0 i_xdma (
-    .sys_clk                  ( pcie_ref_clk     ),
-    .sys_clk_gt               ( pcie_ref_clk_gt  ),
-    .sys_rst_n                ( sys_rst_n_c      ),
-    .user_lnk_up              (                  ),
-
-    // Tx
-    .pci_exp_txp              ( pci_exp_txp      ),
-    .pci_exp_txn              ( pci_exp_txn      ),
-    // Rx
-    .pci_exp_rxp              ( pci_exp_rxp      ),
-    .pci_exp_rxn              ( pci_exp_rxn      ),
-    .usr_irq_req              ( 1'b0             ),
-    .usr_irq_ack              (                  ),
-    .msi_enable               (                  ),
-    .msi_vector_width         (                  ),
-    .axi_aclk                 ( pcie_axi_clk     ),
-    .axi_aresetn              ( pcie_axi_rstn    ),
-    .m_axi_awready            ( pcie_axi_awready ),
-    .m_axi_wready             ( pcie_axi_wready  ),
-    .m_axi_bid                ( pcie_axi_bid     ),
-    .m_axi_bresp              ( pcie_axi_bresp   ),
-    .m_axi_bvalid             ( pcie_axi_bvalid  ),
-    .m_axi_arready            ( pcie_axi_arready ),
-    .m_axi_rid                ( pcie_axi_rid     ),
-    .m_axi_rdata              ( pcie_axi_rdata   ),
-    .m_axi_rresp              ( pcie_axi_rresp   ),
-    .m_axi_rlast              ( pcie_axi_rlast   ),
-    .m_axi_rvalid             ( pcie_axi_rvalid  ),
-    .m_axi_awid               ( pcie_axi_awid    ),
-    .m_axi_awaddr             ( pcie_axi_awaddr  ),
-    .m_axi_awlen              ( pcie_axi_awlen   ),
-    .m_axi_awsize             ( pcie_axi_awsize  ),
-    .m_axi_awburst            ( pcie_axi_awburst ),
-    .m_axi_awprot             ( pcie_axi_awprot  ),
-    .m_axi_awvalid            ( pcie_axi_awvalid ),
-    .m_axi_awlock             ( pcie_axi_awlock  ),
-    .m_axi_awcache            ( pcie_axi_awcache ),
-    .m_axi_wdata              ( pcie_axi_wdata   ),
-    .m_axi_wstrb              ( pcie_axi_wstrb   ),
-    .m_axi_wlast              ( pcie_axi_wlast   ),
-    .m_axi_wvalid             ( pcie_axi_wvalid  ),
-    .m_axi_bready             ( pcie_axi_bready  ),
-    .m_axi_arid               ( pcie_axi_arid    ),
-    .m_axi_araddr             ( pcie_axi_araddr  ),
-    .m_axi_arlen              ( pcie_axi_arlen   ),
-    .m_axi_arsize             ( pcie_axi_arsize  ),
-    .m_axi_arburst            ( pcie_axi_arburst ),
-    .m_axi_arprot             ( pcie_axi_arprot  ),
-    .m_axi_arvalid            ( pcie_axi_arvalid ),
-    .m_axi_arlock             ( pcie_axi_arlock  ),
-    .m_axi_arcache            ( pcie_axi_arcache ),
-    .m_axi_rready             ( pcie_axi_rready  ),
-
-    .cfg_mgmt_addr            ( '0               ),
-    .cfg_mgmt_write           ( '0               ),
-    .cfg_mgmt_write_data      ( '0               ),
-    .cfg_mgmt_byte_enable     ( '0               ),
-    .cfg_mgmt_read            ( '0               ),
-    .cfg_mgmt_read_data       (                  ),
-    .cfg_mgmt_read_write_done (                  )
-  );
-
-  axi_dwidth_converter_256_64 i_axi_dwidth_converter_256_64 (
-    .s_axi_aclk     ( pcie_axi_clk             ),
-    .s_axi_aresetn  ( pcie_axi_rstn            ),
-    .s_axi_awid     ( pcie_axi_awid            ),
-    .s_axi_awaddr   ( pcie_axi_awaddr          ),
-    .s_axi_awlen    ( pcie_axi_awlen           ),
-    .s_axi_awsize   ( pcie_axi_awsize          ),
-    .s_axi_awburst  ( pcie_axi_awburst         ),
-    .s_axi_awlock   ( pcie_axi_awlock          ),
-    .s_axi_awcache  ( pcie_axi_awcache         ),
-    .s_axi_awprot   ( pcie_axi_awprot          ),
-    .s_axi_awregion ( '0                       ),
-    .s_axi_awqos    ( '0                       ),
-    .s_axi_awvalid  ( pcie_axi_awvalid         ),
-    .s_axi_awready  ( pcie_axi_awready         ),
-    .s_axi_wdata    ( pcie_axi_wdata           ),
-    .s_axi_wstrb    ( pcie_axi_wstrb           ),
-    .s_axi_wlast    ( pcie_axi_wlast           ),
-    .s_axi_wvalid   ( pcie_axi_wvalid          ),
-    .s_axi_wready   ( pcie_axi_wready          ),
-    .s_axi_bid      ( pcie_axi_bid             ),
-    .s_axi_bresp    ( pcie_axi_rresp           ),
-    .s_axi_bvalid   ( pcie_axi_bvalid          ),
-    .s_axi_bready   ( pcie_axi_bready          ),
-    .s_axi_arid     ( pcie_axi_arid            ),
-    .s_axi_araddr   ( pcie_axi_araddr          ),
-    .s_axi_arlen    ( pcie_axi_arlen           ),
-    .s_axi_arsize   ( pcie_axi_arsize          ),
-    .s_axi_arburst  ( pcie_axi_arburst         ),
-    .s_axi_arlock   ( pcie_axi_arlock          ),
-    .s_axi_arcache  ( pcie_axi_arcache         ),
-    .s_axi_arprot   ( pcie_axi_arprot          ),
-    .s_axi_arregion ( '0                       ),
-    .s_axi_arqos    ( '0                       ),
-    .s_axi_arvalid  ( pcie_axi_arvalid         ),
-    .s_axi_arready  ( pcie_axi_arready         ),
-    .s_axi_rid      ( pcie_axi_rid             ),
-    .s_axi_rdata    ( pcie_axi_rdata           ),
-    .s_axi_rresp    ( pcie_axi_bresp           ),
-    .s_axi_rlast    ( pcie_axi_rlast           ),
-    .s_axi_rvalid   ( pcie_axi_rvalid          ),
-    .s_axi_rready   ( pcie_axi_rready          ),
-
-    .m_axi_awaddr   ( pcie_dwidth_axi_awaddr   ),
-    .m_axi_awlen    ( pcie_dwidth_axi_awlen    ),
-    .m_axi_awsize   ( pcie_dwidth_axi_awsize   ),
-    .m_axi_awburst  ( pcie_dwidth_axi_awburst  ),
-    .m_axi_awlock   ( pcie_dwidth_axi_awlock   ),
-    .m_axi_awcache  ( pcie_dwidth_axi_awcache  ),
-    .m_axi_awprot   ( pcie_dwidth_axi_awprot   ),
-    .m_axi_awregion ( pcie_dwidth_axi_awregion ),
-    .m_axi_awqos    ( pcie_dwidth_axi_awqos    ),
-    .m_axi_awvalid  ( pcie_dwidth_axi_awvalid  ),
-    .m_axi_awready  ( pcie_dwidth_axi_awready  ),
-    .m_axi_wdata    ( pcie_dwidth_axi_wdata    ),
-    .m_axi_wstrb    ( pcie_dwidth_axi_wstrb    ),
-    .m_axi_wlast    ( pcie_dwidth_axi_wlast    ),
-    .m_axi_wvalid   ( pcie_dwidth_axi_wvalid   ),
-    .m_axi_wready   ( pcie_dwidth_axi_wready   ),
-    .m_axi_bresp    ( pcie_dwidth_axi_bresp    ),
-    .m_axi_bvalid   ( pcie_dwidth_axi_bvalid   ),
-    .m_axi_bready   ( pcie_dwidth_axi_bready   ),
-    .m_axi_araddr   ( pcie_dwidth_axi_araddr   ),
-    .m_axi_arlen    ( pcie_dwidth_axi_arlen    ),
-    .m_axi_arsize   ( pcie_dwidth_axi_arsize   ),
-    .m_axi_arburst  ( pcie_dwidth_axi_arburst  ),
-    .m_axi_arlock   ( pcie_dwidth_axi_arlock   ),
-    .m_axi_arcache  ( pcie_dwidth_axi_arcache  ),
-    .m_axi_arprot   ( pcie_dwidth_axi_arprot   ),
-    .m_axi_arregion ( pcie_dwidth_axi_arregion ),
-    .m_axi_arqos    ( pcie_dwidth_axi_arqos    ),
-    .m_axi_arvalid  ( pcie_dwidth_axi_arvalid  ),
-    .m_axi_arready  ( pcie_dwidth_axi_arready  ),
-    .m_axi_rdata    ( pcie_dwidth_axi_rdata    ),
-    .m_axi_rresp    ( pcie_dwidth_axi_rresp    ),
-    .m_axi_rlast    ( pcie_dwidth_axi_rlast    ),
-    .m_axi_rvalid   ( pcie_dwidth_axi_rvalid   ),
-    .m_axi_rready   ( pcie_dwidth_axi_rready   )
-  );
+//   ddr4_0 i_ddr (
+//     .c0_init_calib_complete (                              ),
+//     .dbg_clk                (                              ),
+//     .c0_sys_clk_p           ( c0_sys_clk_p                 ),
+//     .c0_sys_clk_n           ( c0_sys_clk_n                 ),
+//     .dbg_bus                (                              ),
+//     .c0_ddr4_adr            ( c0_ddr4_adr                  ),
+//     .c0_ddr4_ba             ( c0_ddr4_ba                   ),
+//     .c0_ddr4_cke            ( c0_ddr4_cke                  ),
+//     .c0_ddr4_cs_n           ( c0_ddr4_cs_n                 ),
+//     .c0_ddr4_dm_dbi_n       ( c0_ddr4_dm_dbi_n             ),
+//     .c0_ddr4_dq             ( c0_ddr4_dq                   ),
+//     .c0_ddr4_dqs_c          ( c0_ddr4_dqs_c                ),
+//     .c0_ddr4_dqs_t          ( c0_ddr4_dqs_t                ),
+//     .c0_ddr4_odt            ( c0_ddr4_odt                  ),
+//     .c0_ddr4_bg             ( c0_ddr4_bg                   ),
+//     .c0_ddr4_reset_n        ( c0_ddr4_reset_n              ),
+//     .c0_ddr4_act_n          ( c0_ddr4_act_n                ),
+//     .c0_ddr4_ck_c           ( c0_ddr4_ck_c                 ),
+//     .c0_ddr4_ck_t           ( c0_ddr4_ck_t                 ),
+//     .c0_ddr4_ui_clk         ( ddr_clock_out                ),
+//     .c0_ddr4_ui_clk_sync_rst( ddr_sync_reset               ),
+//     .c0_ddr4_aresetn        ( ndmreset_n                   ),
+//     .c0_ddr4_s_axi_awid     ( '0                           ),
+//     .c0_ddr4_s_axi_awaddr   ( dram_dwidth_axi_awaddr[30:0] ),
+//     .c0_ddr4_s_axi_awlen    ( dram_dwidth_axi_awlen        ),
+//     .c0_ddr4_s_axi_awsize   ( dram_dwidth_axi_awsize       ),
+//     .c0_ddr4_s_axi_awburst  ( dram_dwidth_axi_awburst      ),
+//     .c0_ddr4_s_axi_awlock   ( dram_dwidth_axi_awlock       ),
+//     .c0_ddr4_s_axi_awcache  ( dram_dwidth_axi_awcache      ),
+//     .c0_ddr4_s_axi_awprot   ( dram_dwidth_axi_awprot       ),
+//     .c0_ddr4_s_axi_awqos    ( dram_dwidth_axi_awqos        ),
+//     .c0_ddr4_s_axi_awvalid  ( dram_dwidth_axi_awvalid      ),
+//     .c0_ddr4_s_axi_awready  ( dram_dwidth_axi_awready      ),
+//     .c0_ddr4_s_axi_wdata    ( dram_dwidth_axi_wdata        ),
+//     .c0_ddr4_s_axi_wstrb    ( dram_dwidth_axi_wstrb        ),
+//     .c0_ddr4_s_axi_wlast    ( dram_dwidth_axi_wlast        ),
+//     .c0_ddr4_s_axi_wvalid   ( dram_dwidth_axi_wvalid       ),
+//     .c0_ddr4_s_axi_wready   ( dram_dwidth_axi_wready       ),
+//     .c0_ddr4_s_axi_bready   ( dram_dwidth_axi_bready       ),
+//     .c0_ddr4_s_axi_bid      (                              ),
+//     .c0_ddr4_s_axi_bresp    ( dram_dwidth_axi_bresp        ),
+//     .c0_ddr4_s_axi_bvalid   ( dram_dwidth_axi_bvalid       ),
+//     .c0_ddr4_s_axi_arid     ( '0                           ),
+//     .c0_ddr4_s_axi_araddr   ( dram_dwidth_axi_araddr[30:0] ),
+//     .c0_ddr4_s_axi_arlen    ( dram_dwidth_axi_arlen        ),
+//     .c0_ddr4_s_axi_arsize   ( dram_dwidth_axi_arsize       ),
+//     .c0_ddr4_s_axi_arburst  ( dram_dwidth_axi_arburst      ),
+//     .c0_ddr4_s_axi_arlock   ( dram_dwidth_axi_arlock       ),
+//     .c0_ddr4_s_axi_arcache  ( dram_dwidth_axi_arcache      ),
+//     .c0_ddr4_s_axi_arprot   ( dram_dwidth_axi_arprot       ),
+//     .c0_ddr4_s_axi_arqos    ( dram_dwidth_axi_arqos        ),
+//     .c0_ddr4_s_axi_arvalid  ( dram_dwidth_axi_arvalid      ),
+//     .c0_ddr4_s_axi_arready  ( dram_dwidth_axi_arready      ),
+//     .c0_ddr4_s_axi_rready   ( dram_dwidth_axi_rready       ),
+//     .c0_ddr4_s_axi_rlast    ( dram_dwidth_axi_rlast        ),
+//     .c0_ddr4_s_axi_rvalid   ( dram_dwidth_axi_rvalid       ),
+//     .c0_ddr4_s_axi_rresp    ( dram_dwidth_axi_rresp        ),
+//     .c0_ddr4_s_axi_rid      (                              ),
+//     .c0_ddr4_s_axi_rdata    ( dram_dwidth_axi_rdata        ),
+//     .sys_rst                ( cpu_reset                    )
+//   );
 
 
-assign slave[1].aw_user = '0;
-assign slave[1].ar_user = '0;
-assign slave[1].w_user = '0;
+//   logic pcie_ref_clk;
+//   logic pcie_ref_clk_gt;
 
-logic [3:0] slave_b_id;
-logic [3:0] slave_r_id;
+//   logic pcie_axi_clk;
+//   logic pcie_axi_rstn;
 
-assign slave[1].b_id = slave_b_id[1:0];
-assign slave[1].r_id = slave_r_id[1:0];
+//   logic         pcie_axi_awready;
+//   logic         pcie_axi_wready;
+//   logic [3:0]   pcie_axi_bid;
+//   logic [1:0]   pcie_axi_bresp;
+//   logic         pcie_axi_bvalid;
+//   logic         pcie_axi_arready;
+//   logic [3:0]   pcie_axi_rid;
+//   logic [255:0] pcie_axi_rdata;
+//   logic [1:0]   pcie_axi_rresp;
+//   logic         pcie_axi_rlast;
+//   logic         pcie_axi_rvalid;
+//   logic [3:0]   pcie_axi_awid;
+//   logic [63:0]  pcie_axi_awaddr;
+//   logic [7:0]   pcie_axi_awlen;
+//   logic [2:0]   pcie_axi_awsize;
+//   logic [1:0]   pcie_axi_awburst;
+//   logic [2:0]   pcie_axi_awprot;
+//   logic         pcie_axi_awvalid;
+//   logic         pcie_axi_awlock;
+//   logic [3:0]   pcie_axi_awcache;
+//   logic [255:0] pcie_axi_wdata;
+//   logic [31:0]  pcie_axi_wstrb;
+//   logic         pcie_axi_wlast;
+//   logic         pcie_axi_wvalid;
+//   logic         pcie_axi_bready;
+//   logic [3:0]   pcie_axi_arid;
+//   logic [63:0]  pcie_axi_araddr;
+//   logic [7:0]   pcie_axi_arlen;
+//   logic [2:0]   pcie_axi_arsize;
+//   logic [1:0]   pcie_axi_arburst;
+//   logic [2:0]   pcie_axi_arprot;
+//   logic         pcie_axi_arvalid;
+//   logic         pcie_axi_arlock;
+//   logic [3:0]   pcie_axi_arcache;
+//   logic         pcie_axi_rready;
 
-// PCIe Clock Converter
-axi_clock_converter_0 pcie_axi_clock_converter (
-  .m_axi_aclk     ( clk                      ),
-  .m_axi_aresetn  ( ndmreset_n               ),
-  .m_axi_awid     ( {2'b0, slave[1].aw_id} ),
-  .m_axi_awaddr   ( slave[1].aw_addr   ),
-  .m_axi_awlen    ( slave[1].aw_len    ),
-  .m_axi_awsize   ( slave[1].aw_size   ),
-  .m_axi_awburst  ( slave[1].aw_burst  ),
-  .m_axi_awlock   ( slave[1].aw_lock   ),
-  .m_axi_awcache  ( slave[1].aw_cache  ),
-  .m_axi_awprot   ( slave[1].aw_prot   ),
-  .m_axi_awregion ( slave[1].aw_region ),
-  .m_axi_awqos    ( slave[1].aw_qos    ),
-  .m_axi_awvalid  ( slave[1].aw_valid  ),
-  .m_axi_awready  ( slave[1].aw_ready  ),
-  .m_axi_wdata    ( slave[1].w_data    ),
-  .m_axi_wstrb    ( slave[1].w_strb    ),
-  .m_axi_wlast    ( slave[1].w_last    ),
-  .m_axi_wvalid   ( slave[1].w_valid   ),
-  .m_axi_wready   ( slave[1].w_ready   ),
-  .m_axi_bid      ( slave_b_id         ),
-  .m_axi_bresp    ( slave[1].b_resp    ),
-  .m_axi_bvalid   ( slave[1].b_valid   ),
-  .m_axi_bready   ( slave[1].b_ready   ),
-  .m_axi_arid     ( {2'b0, slave[1].ar_id} ),
-  .m_axi_araddr   ( slave[1].ar_addr   ),
-  .m_axi_arlen    ( slave[1].ar_len    ),
-  .m_axi_arsize   ( slave[1].ar_size   ),
-  .m_axi_arburst  ( slave[1].ar_burst  ),
-  .m_axi_arlock   ( slave[1].ar_lock   ),
-  .m_axi_arcache  ( slave[1].ar_cache  ),
-  .m_axi_arprot   ( slave[1].ar_prot   ),
-  .m_axi_arregion ( slave[1].ar_region ),
-  .m_axi_arqos    ( slave[1].ar_qos    ),
-  .m_axi_arvalid  ( slave[1].ar_valid  ),
-  .m_axi_arready  ( slave[1].ar_ready  ),
-  .m_axi_rid      ( slave_r_id         ),
-  .m_axi_rdata    ( slave[1].r_data    ),
-  .m_axi_rresp    ( slave[1].r_resp    ),
-  .m_axi_rlast    ( slave[1].r_last    ),
-  .m_axi_rvalid   ( slave[1].r_valid   ),
-  .m_axi_rready   ( slave[1].r_ready   ),
-  // from size converter
-  .s_axi_aclk     ( pcie_axi_clk             ),
-  .s_axi_aresetn  ( ndmreset_n               ),
-  .s_axi_awid     ( '0                       ),
-  .s_axi_awaddr   ( pcie_dwidth_axi_awaddr   ),
-  .s_axi_awlen    ( pcie_dwidth_axi_awlen    ),
-  .s_axi_awsize   ( pcie_dwidth_axi_awsize   ),
-  .s_axi_awburst  ( pcie_dwidth_axi_awburst  ),
-  .s_axi_awlock   ( pcie_dwidth_axi_awlock   ),
-  .s_axi_awcache  ( pcie_dwidth_axi_awcache  ),
-  .s_axi_awprot   ( pcie_dwidth_axi_awprot   ),
-  .s_axi_awregion ( pcie_dwidth_axi_awregion ),
-  .s_axi_awqos    ( pcie_dwidth_axi_awqos    ),
-  .s_axi_awvalid  ( pcie_dwidth_axi_awvalid  ),
-  .s_axi_awready  ( pcie_dwidth_axi_awready  ),
-  .s_axi_wdata    ( pcie_dwidth_axi_wdata    ),
-  .s_axi_wstrb    ( pcie_dwidth_axi_wstrb    ),
-  .s_axi_wlast    ( pcie_dwidth_axi_wlast    ),
-  .s_axi_wvalid   ( pcie_dwidth_axi_wvalid   ),
-  .s_axi_wready   ( pcie_dwidth_axi_wready   ),
-  .s_axi_bid      (                          ),
-  .s_axi_bresp    ( pcie_dwidth_axi_bresp    ),
-  .s_axi_bvalid   ( pcie_dwidth_axi_bvalid   ),
-  .s_axi_bready   ( pcie_dwidth_axi_bready   ),
-  .s_axi_arid     ( '0                       ),
-  .s_axi_araddr   ( pcie_dwidth_axi_araddr   ),
-  .s_axi_arlen    ( pcie_dwidth_axi_arlen    ),
-  .s_axi_arsize   ( pcie_dwidth_axi_arsize   ),
-  .s_axi_arburst  ( pcie_dwidth_axi_arburst  ),
-  .s_axi_arlock   ( pcie_dwidth_axi_arlock   ),
-  .s_axi_arcache  ( pcie_dwidth_axi_arcache  ),
-  .s_axi_arprot   ( pcie_dwidth_axi_arprot   ),
-  .s_axi_arregion ( pcie_dwidth_axi_arregion ),
-  .s_axi_arqos    ( pcie_dwidth_axi_arqos    ),
-  .s_axi_arvalid  ( pcie_dwidth_axi_arvalid  ),
-  .s_axi_arready  ( pcie_dwidth_axi_arready  ),
-  .s_axi_rid      (                          ),
-  .s_axi_rdata    ( pcie_dwidth_axi_rdata    ),
-  .s_axi_rresp    ( pcie_dwidth_axi_rresp    ),
-  .s_axi_rlast    ( pcie_dwidth_axi_rlast    ),
-  .s_axi_rvalid   ( pcie_dwidth_axi_rvalid   ),
-  .s_axi_rready   ( pcie_dwidth_axi_rready   )
-);
-`endif
+//   logic [63:0]  pcie_dwidth_axi_awaddr;
+//   logic [7:0]   pcie_dwidth_axi_awlen;
+//   logic [2:0]   pcie_dwidth_axi_awsize;
+//   logic [1:0]   pcie_dwidth_axi_awburst;
+//   logic [0:0]   pcie_dwidth_axi_awlock;
+//   logic [3:0]   pcie_dwidth_axi_awcache;
+//   logic [2:0]   pcie_dwidth_axi_awprot;
+//   logic [3:0]   pcie_dwidth_axi_awregion;
+//   logic [3:0]   pcie_dwidth_axi_awqos;
+//   logic         pcie_dwidth_axi_awvalid;
+//   logic         pcie_dwidth_axi_awready;
+//   logic [63:0]  pcie_dwidth_axi_wdata;
+//   logic [7:0]   pcie_dwidth_axi_wstrb;
+//   logic         pcie_dwidth_axi_wlast;
+//   logic         pcie_dwidth_axi_wvalid;
+//   logic         pcie_dwidth_axi_wready;
+//   logic [1:0]   pcie_dwidth_axi_bresp;
+//   logic         pcie_dwidth_axi_bvalid;
+//   logic         pcie_dwidth_axi_bready;
+//   logic [63:0]  pcie_dwidth_axi_araddr;
+//   logic [7:0]   pcie_dwidth_axi_arlen;
+//   logic [2:0]   pcie_dwidth_axi_arsize;
+//   logic [1:0]   pcie_dwidth_axi_arburst;
+//   logic [0:0]   pcie_dwidth_axi_arlock;
+//   logic [3:0]   pcie_dwidth_axi_arcache;
+//   logic [2:0]   pcie_dwidth_axi_arprot;
+//   logic [3:0]   pcie_dwidth_axi_arregion;
+//   logic [3:0]   pcie_dwidth_axi_arqos;
+//   logic         pcie_dwidth_axi_arvalid;
+//   logic         pcie_dwidth_axi_arready;
+//   logic [63:0]  pcie_dwidth_axi_rdata;
+//   logic [1:0]   pcie_dwidth_axi_rresp;
+//   logic         pcie_dwidth_axi_rlast;
+//   logic         pcie_dwidth_axi_rvalid;
+//   logic         pcie_dwidth_axi_rready;
+
+//   // PCIe Reset
+//   logic sys_rst_n_c;
+//   IBUF sys_reset_n_ibuf (.O(sys_rst_n_c), .I(sys_rst_n));
+
+//   IBUFDS_GTE4 #(
+//     .REFCLK_HROW_CK_SEL ( 2'b00 )
+//   ) IBUFDS_GTE4_inst (
+//     .O     ( pcie_ref_clk_gt ),
+//     .ODIV2 ( pcie_ref_clk    ),
+//     .CEB   ( 1'b0            ),
+//     .I     ( sys_clk_p       ),
+//     .IB    ( sys_clk_n       )
+//   );
+
+//   // 250 MHz AXI
+//   xdma_0 i_xdma (
+//     .sys_clk                  ( pcie_ref_clk     ),
+//     .sys_clk_gt               ( pcie_ref_clk_gt  ),
+//     .sys_rst_n                ( sys_rst_n_c      ),
+//     .user_lnk_up              (                  ),
+
+//     // Tx
+//     .pci_exp_txp              ( pci_exp_txp      ),
+//     .pci_exp_txn              ( pci_exp_txn      ),
+//     // Rx
+//     .pci_exp_rxp              ( pci_exp_rxp      ),
+//     .pci_exp_rxn              ( pci_exp_rxn      ),
+//     .usr_irq_req              ( 1'b0             ),
+//     .usr_irq_ack              (                  ),
+//     .msi_enable               (                  ),
+//     .msi_vector_width         (                  ),
+//     .axi_aclk                 ( pcie_axi_clk     ),
+//     .axi_aresetn              ( pcie_axi_rstn    ),
+//     .m_axi_awready            ( pcie_axi_awready ),
+//     .m_axi_wready             ( pcie_axi_wready  ),
+//     .m_axi_bid                ( pcie_axi_bid     ),
+//     .m_axi_bresp              ( pcie_axi_bresp   ),
+//     .m_axi_bvalid             ( pcie_axi_bvalid  ),
+//     .m_axi_arready            ( pcie_axi_arready ),
+//     .m_axi_rid                ( pcie_axi_rid     ),
+//     .m_axi_rdata              ( pcie_axi_rdata   ),
+//     .m_axi_rresp              ( pcie_axi_rresp   ),
+//     .m_axi_rlast              ( pcie_axi_rlast   ),
+//     .m_axi_rvalid             ( pcie_axi_rvalid  ),
+//     .m_axi_awid               ( pcie_axi_awid    ),
+//     .m_axi_awaddr             ( pcie_axi_awaddr  ),
+//     .m_axi_awlen              ( pcie_axi_awlen   ),
+//     .m_axi_awsize             ( pcie_axi_awsize  ),
+//     .m_axi_awburst            ( pcie_axi_awburst ),
+//     .m_axi_awprot             ( pcie_axi_awprot  ),
+//     .m_axi_awvalid            ( pcie_axi_awvalid ),
+//     .m_axi_awlock             ( pcie_axi_awlock  ),
+//     .m_axi_awcache            ( pcie_axi_awcache ),
+//     .m_axi_wdata              ( pcie_axi_wdata   ),
+//     .m_axi_wstrb              ( pcie_axi_wstrb   ),
+//     .m_axi_wlast              ( pcie_axi_wlast   ),
+//     .m_axi_wvalid             ( pcie_axi_wvalid  ),
+//     .m_axi_bready             ( pcie_axi_bready  ),
+//     .m_axi_arid               ( pcie_axi_arid    ),
+//     .m_axi_araddr             ( pcie_axi_araddr  ),
+//     .m_axi_arlen              ( pcie_axi_arlen   ),
+//     .m_axi_arsize             ( pcie_axi_arsize  ),
+//     .m_axi_arburst            ( pcie_axi_arburst ),
+//     .m_axi_arprot             ( pcie_axi_arprot  ),
+//     .m_axi_arvalid            ( pcie_axi_arvalid ),
+//     .m_axi_arlock             ( pcie_axi_arlock  ),
+//     .m_axi_arcache            ( pcie_axi_arcache ),
+//     .m_axi_rready             ( pcie_axi_rready  ),
+
+//     .cfg_mgmt_addr            ( '0               ),
+//     .cfg_mgmt_write           ( '0               ),
+//     .cfg_mgmt_write_data      ( '0               ),
+//     .cfg_mgmt_byte_enable     ( '0               ),
+//     .cfg_mgmt_read            ( '0               ),
+//     .cfg_mgmt_read_data       (                  ),
+//     .cfg_mgmt_read_write_done (                  )
+//   );
+
+//   axi_dwidth_converter_256_64 i_axi_dwidth_converter_256_64 (
+//     .s_axi_aclk     ( pcie_axi_clk             ),
+//     .s_axi_aresetn  ( pcie_axi_rstn            ),
+//     .s_axi_awid     ( pcie_axi_awid            ),
+//     .s_axi_awaddr   ( pcie_axi_awaddr          ),
+//     .s_axi_awlen    ( pcie_axi_awlen           ),
+//     .s_axi_awsize   ( pcie_axi_awsize          ),
+//     .s_axi_awburst  ( pcie_axi_awburst         ),
+//     .s_axi_awlock   ( pcie_axi_awlock          ),
+//     .s_axi_awcache  ( pcie_axi_awcache         ),
+//     .s_axi_awprot   ( pcie_axi_awprot          ),
+//     .s_axi_awregion ( '0                       ),
+//     .s_axi_awqos    ( '0                       ),
+//     .s_axi_awvalid  ( pcie_axi_awvalid         ),
+//     .s_axi_awready  ( pcie_axi_awready         ),
+//     .s_axi_wdata    ( pcie_axi_wdata           ),
+//     .s_axi_wstrb    ( pcie_axi_wstrb           ),
+//     .s_axi_wlast    ( pcie_axi_wlast           ),
+//     .s_axi_wvalid   ( pcie_axi_wvalid          ),
+//     .s_axi_wready   ( pcie_axi_wready          ),
+//     .s_axi_bid      ( pcie_axi_bid             ),
+//     .s_axi_bresp    ( pcie_axi_rresp           ),
+//     .s_axi_bvalid   ( pcie_axi_bvalid          ),
+//     .s_axi_bready   ( pcie_axi_bready          ),
+//     .s_axi_arid     ( pcie_axi_arid            ),
+//     .s_axi_araddr   ( pcie_axi_araddr          ),
+//     .s_axi_arlen    ( pcie_axi_arlen           ),
+//     .s_axi_arsize   ( pcie_axi_arsize          ),
+//     .s_axi_arburst  ( pcie_axi_arburst         ),
+//     .s_axi_arlock   ( pcie_axi_arlock          ),
+//     .s_axi_arcache  ( pcie_axi_arcache         ),
+//     .s_axi_arprot   ( pcie_axi_arprot          ),
+//     .s_axi_arregion ( '0                       ),
+//     .s_axi_arqos    ( '0                       ),
+//     .s_axi_arvalid  ( pcie_axi_arvalid         ),
+//     .s_axi_arready  ( pcie_axi_arready         ),
+//     .s_axi_rid      ( pcie_axi_rid             ),
+//     .s_axi_rdata    ( pcie_axi_rdata           ),
+//     .s_axi_rresp    ( pcie_axi_bresp           ),
+//     .s_axi_rlast    ( pcie_axi_rlast           ),
+//     .s_axi_rvalid   ( pcie_axi_rvalid          ),
+//     .s_axi_rready   ( pcie_axi_rready          ),
+
+//     .m_axi_awaddr   ( pcie_dwidth_axi_awaddr   ),
+//     .m_axi_awlen    ( pcie_dwidth_axi_awlen    ),
+//     .m_axi_awsize   ( pcie_dwidth_axi_awsize   ),
+//     .m_axi_awburst  ( pcie_dwidth_axi_awburst  ),
+//     .m_axi_awlock   ( pcie_dwidth_axi_awlock   ),
+//     .m_axi_awcache  ( pcie_dwidth_axi_awcache  ),
+//     .m_axi_awprot   ( pcie_dwidth_axi_awprot   ),
+//     .m_axi_awregion ( pcie_dwidth_axi_awregion ),
+//     .m_axi_awqos    ( pcie_dwidth_axi_awqos    ),
+//     .m_axi_awvalid  ( pcie_dwidth_axi_awvalid  ),
+//     .m_axi_awready  ( pcie_dwidth_axi_awready  ),
+//     .m_axi_wdata    ( pcie_dwidth_axi_wdata    ),
+//     .m_axi_wstrb    ( pcie_dwidth_axi_wstrb    ),
+//     .m_axi_wlast    ( pcie_dwidth_axi_wlast    ),
+//     .m_axi_wvalid   ( pcie_dwidth_axi_wvalid   ),
+//     .m_axi_wready   ( pcie_dwidth_axi_wready   ),
+//     .m_axi_bresp    ( pcie_dwidth_axi_bresp    ),
+//     .m_axi_bvalid   ( pcie_dwidth_axi_bvalid   ),
+//     .m_axi_bready   ( pcie_dwidth_axi_bready   ),
+//     .m_axi_araddr   ( pcie_dwidth_axi_araddr   ),
+//     .m_axi_arlen    ( pcie_dwidth_axi_arlen    ),
+//     .m_axi_arsize   ( pcie_dwidth_axi_arsize   ),
+//     .m_axi_arburst  ( pcie_dwidth_axi_arburst  ),
+//     .m_axi_arlock   ( pcie_dwidth_axi_arlock   ),
+//     .m_axi_arcache  ( pcie_dwidth_axi_arcache  ),
+//     .m_axi_arprot   ( pcie_dwidth_axi_arprot   ),
+//     .m_axi_arregion ( pcie_dwidth_axi_arregion ),
+//     .m_axi_arqos    ( pcie_dwidth_axi_arqos    ),
+//     .m_axi_arvalid  ( pcie_dwidth_axi_arvalid  ),
+//     .m_axi_arready  ( pcie_dwidth_axi_arready  ),
+//     .m_axi_rdata    ( pcie_dwidth_axi_rdata    ),
+//     .m_axi_rresp    ( pcie_dwidth_axi_rresp    ),
+//     .m_axi_rlast    ( pcie_dwidth_axi_rlast    ),
+//     .m_axi_rvalid   ( pcie_dwidth_axi_rvalid   ),
+//     .m_axi_rready   ( pcie_dwidth_axi_rready   )
+//   );
+
+
+// assign slave[1].aw_user = '0;
+// assign slave[1].ar_user = '0;
+// assign slave[1].w_user = '0;
+
+// logic [3:0] slave_b_id;
+// logic [3:0] slave_r_id;
+
+// assign slave[1].b_id = slave_b_id[1:0];
+// assign slave[1].r_id = slave_r_id[1:0];
+
+// // PCIe Clock Converter
+// axi_clock_converter_0 pcie_axi_clock_converter (
+//   .m_axi_aclk     ( clk                      ),
+//   .m_axi_aresetn  ( ndmreset_n               ),
+//   .m_axi_awid     ( {2'b0, slave[1].aw_id} ),
+//   .m_axi_awaddr   ( slave[1].aw_addr   ),
+//   .m_axi_awlen    ( slave[1].aw_len    ),
+//   .m_axi_awsize   ( slave[1].aw_size   ),
+//   .m_axi_awburst  ( slave[1].aw_burst  ),
+//   .m_axi_awlock   ( slave[1].aw_lock   ),
+//   .m_axi_awcache  ( slave[1].aw_cache  ),
+//   .m_axi_awprot   ( slave[1].aw_prot   ),
+//   .m_axi_awregion ( slave[1].aw_region ),
+//   .m_axi_awqos    ( slave[1].aw_qos    ),
+//   .m_axi_awvalid  ( slave[1].aw_valid  ),
+//   .m_axi_awready  ( slave[1].aw_ready  ),
+//   .m_axi_wdata    ( slave[1].w_data    ),
+//   .m_axi_wstrb    ( slave[1].w_strb    ),
+//   .m_axi_wlast    ( slave[1].w_last    ),
+//   .m_axi_wvalid   ( slave[1].w_valid   ),
+//   .m_axi_wready   ( slave[1].w_ready   ),
+//   .m_axi_bid      ( slave_b_id         ),
+//   .m_axi_bresp    ( slave[1].b_resp    ),
+//   .m_axi_bvalid   ( slave[1].b_valid   ),
+//   .m_axi_bready   ( slave[1].b_ready   ),
+//   .m_axi_arid     ( {2'b0, slave[1].ar_id} ),
+//   .m_axi_araddr   ( slave[1].ar_addr   ),
+//   .m_axi_arlen    ( slave[1].ar_len    ),
+//   .m_axi_arsize   ( slave[1].ar_size   ),
+//   .m_axi_arburst  ( slave[1].ar_burst  ),
+//   .m_axi_arlock   ( slave[1].ar_lock   ),
+//   .m_axi_arcache  ( slave[1].ar_cache  ),
+//   .m_axi_arprot   ( slave[1].ar_prot   ),
+//   .m_axi_arregion ( slave[1].ar_region ),
+//   .m_axi_arqos    ( slave[1].ar_qos    ),
+//   .m_axi_arvalid  ( slave[1].ar_valid  ),
+//   .m_axi_arready  ( slave[1].ar_ready  ),
+//   .m_axi_rid      ( slave_r_id         ),
+//   .m_axi_rdata    ( slave[1].r_data    ),
+//   .m_axi_rresp    ( slave[1].r_resp    ),
+//   .m_axi_rlast    ( slave[1].r_last    ),
+//   .m_axi_rvalid   ( slave[1].r_valid   ),
+//   .m_axi_rready   ( slave[1].r_ready   ),
+//   // from size converter
+//   .s_axi_aclk     ( pcie_axi_clk             ),
+//   .s_axi_aresetn  ( ndmreset_n               ),
+//   .s_axi_awid     ( '0                       ),
+//   .s_axi_awaddr   ( pcie_dwidth_axi_awaddr   ),
+//   .s_axi_awlen    ( pcie_dwidth_axi_awlen    ),
+//   .s_axi_awsize   ( pcie_dwidth_axi_awsize   ),
+//   .s_axi_awburst  ( pcie_dwidth_axi_awburst  ),
+//   .s_axi_awlock   ( pcie_dwidth_axi_awlock   ),
+//   .s_axi_awcache  ( pcie_dwidth_axi_awcache  ),
+//   .s_axi_awprot   ( pcie_dwidth_axi_awprot   ),
+//   .s_axi_awregion ( pcie_dwidth_axi_awregion ),
+//   .s_axi_awqos    ( pcie_dwidth_axi_awqos    ),
+//   .s_axi_awvalid  ( pcie_dwidth_axi_awvalid  ),
+//   .s_axi_awready  ( pcie_dwidth_axi_awready  ),
+//   .s_axi_wdata    ( pcie_dwidth_axi_wdata    ),
+//   .s_axi_wstrb    ( pcie_dwidth_axi_wstrb    ),
+//   .s_axi_wlast    ( pcie_dwidth_axi_wlast    ),
+//   .s_axi_wvalid   ( pcie_dwidth_axi_wvalid   ),
+//   .s_axi_wready   ( pcie_dwidth_axi_wready   ),
+//   .s_axi_bid      (                          ),
+//   .s_axi_bresp    ( pcie_dwidth_axi_bresp    ),
+//   .s_axi_bvalid   ( pcie_dwidth_axi_bvalid   ),
+//   .s_axi_bready   ( pcie_dwidth_axi_bready   ),
+//   .s_axi_arid     ( '0                       ),
+//   .s_axi_araddr   ( pcie_dwidth_axi_araddr   ),
+//   .s_axi_arlen    ( pcie_dwidth_axi_arlen    ),
+//   .s_axi_arsize   ( pcie_dwidth_axi_arsize   ),
+//   .s_axi_arburst  ( pcie_dwidth_axi_arburst  ),
+//   .s_axi_arlock   ( pcie_dwidth_axi_arlock   ),
+//   .s_axi_arcache  ( pcie_dwidth_axi_arcache  ),
+//   .s_axi_arprot   ( pcie_dwidth_axi_arprot   ),
+//   .s_axi_arregion ( pcie_dwidth_axi_arregion ),
+//   .s_axi_arqos    ( pcie_dwidth_axi_arqos    ),
+//   .s_axi_arvalid  ( pcie_dwidth_axi_arvalid  ),
+//   .s_axi_arready  ( pcie_dwidth_axi_arready  ),
+//   .s_axi_rid      (                          ),
+//   .s_axi_rdata    ( pcie_dwidth_axi_rdata    ),
+//   .s_axi_rresp    ( pcie_dwidth_axi_rresp    ),
+//   .s_axi_rlast    ( pcie_dwidth_axi_rlast    ),
+//   .s_axi_rvalid   ( pcie_dwidth_axi_rvalid   ),
+//   .s_axi_rready   ( pcie_dwidth_axi_rready   )
+// );
+// `endif
 
 endmodule
