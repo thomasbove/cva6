@@ -64,6 +64,7 @@ module cva6_clic_controller #(
                            (clic_irq_priv_i == riscv::PRIV_LVL_S && irq_ctrl_i.sie)));
 
       end
+      default: clic_irq_req_o = 1'b0;
     endcase
   end
 
