@@ -57,7 +57,8 @@ module std_cache_subsystem import ariane_pkg::*; import std_cache_pkg::*; #(
     output dcache_req_o_t   [2:0]          dcache_req_ports_o,     // to/from LSU
     // memory side
     output axi_req_t                       axi_req_o,
-    input  axi_rsp_t                       axi_resp_i
+    input  axi_rsp_t                       axi_resp_i,
+    input  logic [riscv::XLEN-1:0]         patid_i                 // llc set-based partition
 );
 
   assign wbuffer_empty_o = 1'b1;
@@ -96,7 +97,8 @@ module std_cache_subsystem import ariane_pkg::*; import std_cache_pkg::*; #(
         .dreq_i     ( icache_dreq_i         ),
         .dreq_o     ( icache_dreq_o         ),
         .axi_req_o  ( axi_req_icache        ),
-        .axi_resp_i ( axi_resp_icache       )
+        .axi_resp_i ( axi_resp_icache       ),
+        .patid_i    ( patid_i               )
     );
 
    // decreasing priority
@@ -127,7 +129,8 @@ module std_cache_subsystem import ariane_pkg::*; import std_cache_pkg::*; #(
       .req_ports_i  ( dcache_req_ports_i     ),
       .req_ports_o  ( dcache_req_ports_o     ),
       .amo_req_i,
-      .amo_resp_o
+      .amo_resp_o,
+      .patid_i      ( patid_i                ) // llc set-based partition
    );
 
     // -----------------------

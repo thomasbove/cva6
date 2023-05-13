@@ -64,7 +64,8 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     output cache_line_t                                 data_o,
     output cl_be_t                                      be_o,
     input  cache_line_t [DCACHE_SET_ASSOC-1:0]          data_i,
-    output logic                                        we_o
+    output logic                                        we_o,
+    input  logic [riscv::XLEN-1:0]                      patid_i // llc set-based partition
 );
 
     // Three MSHR ports + AMO port
@@ -579,6 +580,8 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     logic [riscv::XLEN-1:0] bypass_addr;
     assign bypass_addr = bypass_adapter_req.addr;
 
+    axi_req_t axi_bypass;
+
     axi_adapter #(
         .DATA_WIDTH            ( 64                 ),
         .CACHELINE_BYTE_OFFSET ( DCACHE_BYTE_OFFSET ),
@@ -595,6 +598,7 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .type_i               (bypass_adapter_req.reqtype),
         .amo_i                (bypass_adapter_req.amo),
         .id_i                 (({{AXI_ID_WIDTH-4{1'b0}}, bypass_adapter_req.id})),
+        // .patid_i              (patid_i), // llc set-based partition
         .addr_i               (bypass_addr),
         .wdata_i              (bypass_adapter_req.wdata),
         .we_i                 (bypass_adapter_req.we),
@@ -606,9 +610,15 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .id_o                 (), // not used, single outstanding request in arbiter
         .critical_word_o      (), // not used for single requests
         .critical_word_valid_o(), // not used for single requests
-        .axi_req_o            (axi_bypass_o),
+        .axi_req_o            (axi_bypass),
         .axi_resp_i           (axi_bypass_i)
     );
+
+    always_comb begin
+        axi_bypass_o = axi_bypass;
+        axi_bypass_o.aw.user   = patid_i;
+        axi_bypass_o.ar.user   = patid_i;
+    end
 
     // ----------------------
     // Cache Line AXI Refill
@@ -616,6 +626,8 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
     // Cast req_fsm_miss_addr to axi_adapter port size
     logic [riscv::XLEN-1:0] miss_addr;
     assign miss_addr = req_fsm_miss_addr;
+
+    axi_req_t axi_data;
 
     axi_adapter  #(
         .DATA_WIDTH            ( DCACHE_LINE_WIDTH  ),
@@ -639,14 +651,21 @@ module miss_handler import ariane_pkg::*; import std_cache_pkg::*; #(
         .be_i                ( req_fsm_miss_be    ),
         .size_i              ( req_fsm_miss_size  ),
         .id_i                ( {{AXI_ID_WIDTH-4{1'b0}}, 4'b1100} ),
+        // .patid_i             ( patid_i            ), // llc set-based partition
         .valid_o             ( valid_miss_fsm     ),
         .rdata_o             ( data_miss_fsm      ),
         .id_o                (                    ),
         .critical_word_o     ( critical_word_o    ),
         .critical_word_valid_o (critical_word_valid_o),
-        .axi_req_o           ( axi_data_o         ),
+        .axi_req_o           ( axi_data           ),
         .axi_resp_i          ( axi_data_i         )
     );
+
+    always_comb begin
+        axi_data_o = axi_data;
+        axi_data_o.aw.user   = patid_i;
+        axi_data_o.ar.user   = patid_i;
+    end
 
     // -----------------
     // Replacement LFSR

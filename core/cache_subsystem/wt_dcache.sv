@@ -47,7 +47,8 @@ module wt_dcache import ariane_pkg::*; import wt_cache_pkg::*; #(
   input  dcache_rtrn_t                   mem_rtrn_i,
   output logic                           mem_data_req_o,
   input  logic                           mem_data_ack_i,
-  output dcache_req_t                    mem_data_o
+  output dcache_req_t                    mem_data_o,
+  input  logic [riscv::XLEN-1:0]         patid_i
 );
 
   // LD unit and PTW
@@ -223,7 +224,9 @@ module wt_dcache import ariane_pkg::*; import wt_cache_pkg::*; #(
       .rd_data_i       ( rd_data           ),
       .rd_user_i       ( rd_user           ),
       .rd_vld_bits_i   ( rd_vld_bits       ),
-      .rd_hit_oh_i     ( rd_hit_oh         )
+      .rd_hit_oh_i     ( rd_hit_oh         ),
+      // llc set-based partition
+      .patid_i         ( patid_i           )
     );
   end
 ///////////////////////////////////////////////////////
@@ -283,7 +286,9 @@ module wt_dcache import ariane_pkg::*; import wt_cache_pkg::*; #(
     // write buffer forwarding
     .wbuffer_data_o  ( wbuffer_data        ),
     .tx_paddr_o      ( tx_paddr            ),
-    .tx_vld_o        ( tx_vld              )
+    .tx_vld_o        ( tx_vld              ),
+    // llc set-based partition
+    .patid_i         ( patid_i             )
   );
 
 ///////////////////////////////////////////////////////

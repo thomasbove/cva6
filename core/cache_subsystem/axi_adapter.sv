@@ -40,6 +40,7 @@ module axi_adapter #(
   input  logic [(DATA_WIDTH/AXI_DATA_WIDTH)-1:0][(AXI_DATA_WIDTH/8)-1:0]  be_i,
   input  logic [1:0]                       size_i,
   input  logic [AXI_ID_WIDTH-1:0]          id_i,
+  // input  logic [riscv::XLEN-1:0]           patid_i, // llc set-based partition
   // read port
   output logic                             valid_o,
   output logic [(DATA_WIDTH/AXI_DATA_WIDTH)-1:0][AXI_DATA_WIDTH-1:0] rdata_o,
@@ -89,6 +90,7 @@ module axi_adapter #(
     axi_req_o.aw.id     = id_i;
     axi_req_o.aw.atop   = atop_from_amo(amo_i);
     axi_req_o.aw.user   = '0;
+    // axi_req_o.aw.user   = patid_i; // llc set-based partition
 
     axi_req_o.ar_valid  = 1'b0;
     // Cast to AXI address width
@@ -108,6 +110,7 @@ module axi_adapter #(
     axi_req_o.ar.qos    = 4'b0;
     axi_req_o.ar.id     = id_i;
     axi_req_o.ar.user   = '0;
+    // axi_req_o.ar.user   = patid_i; // llc set-based partition
 
     axi_req_o.w_valid   = 1'b0;
     axi_req_o.w.data    = wdata_i[0];

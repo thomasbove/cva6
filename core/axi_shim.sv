@@ -66,7 +66,9 @@ module axi_shim #(
   output logic                            wr_exokay_o, // indicates whether exclusive tx succeeded
   // AXI port
   output axi_req_t                        axi_req_o,
-  input  axi_rsp_t                        axi_resp_i
+  input  axi_rsp_t                        axi_resp_i,
+  // llc partition
+  input  logic [riscv::XLEN-1:0]          patid_i
 );
   localparam AddrIndex = ($clog2(AxiNumWords) > 0) ? $clog2(AxiNumWords) : 1;
 
@@ -96,7 +98,7 @@ module axi_shim #(
   assign axi_req_o.aw.cache  = axi_pkg::CACHE_MODIFIABLE;
   assign axi_req_o.aw.qos    = 4'b0;
   assign axi_req_o.aw.atop   = wr_atop_i;
-  assign axi_req_o.aw.user   = '0;
+  assign axi_req_o.aw.user   = patid_i;
 
   // data
   assign axi_req_o.w.data    = wr_data_i[wr_cnt_q];
@@ -254,7 +256,7 @@ module axi_shim #(
   assign axi_req_o.ar.lock   = rd_lock_i;
   assign axi_req_o.ar.cache  = axi_pkg::CACHE_MODIFIABLE;
   assign axi_req_o.ar.qos    = 4'b0;
-  assign axi_req_o.ar.user   = '0;
+  assign axi_req_o.ar.user   = patid_i;
 
   // make the read request
   assign axi_req_o.ar_valid  = rd_req_i;

@@ -50,7 +50,9 @@ module wt_dcache_ctrl import ariane_pkg::*; import wt_cache_pkg::*; #(
   input  riscv::xlen_t                    rd_data_i,
   input  logic [DCACHE_USER_WIDTH-1:0]    rd_user_i,
   input  logic [DCACHE_SET_ASSOC-1:0]     rd_vld_bits_i,
-  input  logic [DCACHE_SET_ASSOC-1:0]     rd_hit_oh_i
+  input  logic [DCACHE_SET_ASSOC-1:0]     rd_hit_oh_i,
+  // llc set-based partition
+  input  logic [riscv::XLEN-1:0]          patid_i
 );
 
   // controller FSM
@@ -93,7 +95,8 @@ module wt_dcache_ctrl import ariane_pkg::*; import wt_cache_pkg::*; #(
 
   assign miss_we_o    = '0;
   assign miss_wdata_o = '0;
-  assign miss_wuser_o = '0;
+  // assign miss_wuser_o = '0;
+  assign miss_wuser_o = patid_i;
   assign miss_id_o    = RdTxId;
   assign rd_req_d     = rd_req_o;
   assign rd_ack_d     = rd_ack_i;

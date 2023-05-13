@@ -57,6 +57,7 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
   // writebuffer status
   output logic                           wbuffer_empty_o,
   output logic                           wbuffer_not_ni_o,
+  input logic [riscv::XLEN-1:0]          patid_i,                // LLC set-based partition
 `ifdef PITON_ARIANE
   // L15 (memory side)
   output l15_req_t                       l15_req_o,
@@ -138,7 +139,8 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
     .mem_rtrn_i      ( adapter_dcache          ),
     .mem_data_req_o  ( dcache_adapter_data_req ),
     .mem_data_ack_i  ( adapter_dcache_data_ack ),
-    .mem_data_o      ( dcache_adapter          )
+    .mem_data_o      ( dcache_adapter          ),
+    .patid_i         ( patid_i                 )
   );
 
 

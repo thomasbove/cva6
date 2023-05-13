@@ -596,6 +596,8 @@ module cva6 import ariane_pkg::*; #(
     .*
   );
 
+  logic [riscv::XLEN-1:0] patid;
+
   // ---------
   // CSR
   // ---------
@@ -664,6 +666,7 @@ module cva6 import ariane_pkg::*; #(
     .ipi_i,
     .irq_i,
     .time_irq_i,
+    .patid_o                ( patid                         ),
     .*
   );
 
@@ -751,7 +754,7 @@ module cva6 import ariane_pkg::*; #(
     .AxiIdWidth           ( AxiIdWidth ),
     .axi_req_t            ( axi_req_t ),
     .axi_rsp_t            ( axi_rsp_t )
-  ) i_cache_subsystem (
+  ) i_cache_subsystem_wt (
     // to D$
     .clk_i                 ( clk_i                       ),
     .rst_ni                ( rst_uarch_n                 ),
@@ -780,6 +783,7 @@ module cva6 import ariane_pkg::*; #(
     // write buffer status
     .wbuffer_empty_o       ( dcache_commit_wbuffer_empty ),
     .wbuffer_not_ni_o      ( dcache_commit_wbuffer_not_ni ),
+    .patid_i               ( patid                       ),
 `ifdef PITON_ARIANE
     .l15_req_o             ( l15_req_o                   ),
     .l15_rtrn_i            ( l15_rtrn_i                  )
@@ -804,7 +808,7 @@ module cva6 import ariane_pkg::*; #(
     .axi_w_chan_t          ( axi_w_chan_t                ),
     .axi_req_t             ( axi_req_t                   ),
     .axi_rsp_t             ( axi_rsp_t                   )
-  ) i_cache_subsystem (
+  ) i_cache_subsystem_std (
     // to D$
     .clk_i                 ( clk_i                       ),
     .rst_ni                ( rst_uarch_n                 ),
@@ -835,7 +839,8 @@ module cva6 import ariane_pkg::*; #(
     .dcache_req_ports_o    ( dcache_req_ports_cache_ex   ),
     // memory side
     .axi_req_o             ( axi_req_o                   ),
-    .axi_resp_i            ( axi_resp_i                  )
+    .axi_resp_i            ( axi_resp_i                  ),
+    .patid_i               ( patid                       )
   );
   assign dcache_commit_wbuffer_not_ni = 1'b1;
   end

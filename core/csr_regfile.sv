@@ -96,7 +96,8 @@ module csr_regfile import ariane_pkg::*; #(
     output logic                  perf_we_o,
     // PMPs
     output riscv::pmpcfg_t [15:0] pmpcfg_o,   // PMP configuration containing pmpcfg for max 16 PMPs
-    output logic [15:0][riscv::PLEN-3:0] pmpaddr_o            // PMP addresses
+    output logic [15:0][riscv::PLEN-3:0] pmpaddr_o,            // PMP addresses
+    output riscv::xlen_t          patid_o                      // LLC set-based partition
 );
     // internal signal to keep track of access exceptions
     logic        read_access_exception, update_access_exception, privilege_violation;
@@ -151,6 +152,10 @@ module csr_regfile import ariane_pkg::*; #(
     riscv::xlen_t icache_q,    icache_d;
     riscv::xlen_t fence_t_pad_q, fence_t_pad_d;
     riscv::xlen_t fence_t_ceil_q, fence_t_ceil_d;
+
+    riscv::xlen_t patid_q, patid_d;
+
+    assign patid_o = patid_q;
 
     logic        wfi_d,       wfi_q;
 
@@ -406,6 +411,7 @@ module csr_regfile import ariane_pkg::*; #(
                     else
                         csr_rdata = {10'b0, pmpaddr_q[index][riscv::PLEN-3:1], 1'b0};
                 end
+                riscv::CSR_PATID:           csr_rdata = patid_q;
                 default: read_access_exception = 1'b1;
             endcase
         end
@@ -501,6 +507,8 @@ module csr_regfile import ariane_pkg::*; #(
 
         pmpcfg_d                = pmpcfg_q;
         pmpaddr_d               = pmpaddr_q;
+
+        patid_d                 = patid_q;
 
         // check for correct access rights and that we are writing
         if (csr_we) begin
@@ -803,6 +811,7 @@ module csr_regfile import ariane_pkg::*; #(
                         pmpaddr_d[index] = csr_wdata[riscv::PLEN-3:0];
                     end
                 end
+                riscv::CSR_PATID:              patid_d = csr_wdata;
                 default: update_access_exception = 1'b1;
             endcase
         end
@@ -1322,6 +1331,8 @@ module csr_regfile import ariane_pkg::*; #(
             // pmp
             pmpcfg_q               <= '0;
             pmpaddr_q              <= '0;
+            // llc set-based partition
+            patid_q                <= '0;
         end else begin
             priv_lvl_q             <= priv_lvl_d;
             // floating-point registers
@@ -1384,6 +1395,8 @@ module csr_regfile import ariane_pkg::*; #(
                     pmpaddr_q[i] <= '0;
                 end
             end
+            // llc set-based partition
+            patid_q                <= patid_d;
         end
     end
 

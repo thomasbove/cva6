@@ -39,7 +39,8 @@ module cva6_icache_axi_wrapper import ariane_pkg::*; import wt_cache_pkg::*; #(
   output icache_dreq_o_t    dreq_o,
   // AXI refill port
   output axi_req_t          axi_req_o,
-  input  axi_rsp_t          axi_resp_i
+  input  axi_rsp_t          axi_resp_i,
+  input  logic [riscv::XLEN] patid_i // llc set-based partition
 );
 
   localparam AxiNumWords = (ICACHE_LINE_WIDTH/AxiDataWidth) * (ICACHE_LINE_WIDTH  > DCACHE_LINE_WIDTH)  +
@@ -169,7 +170,8 @@ module cva6_icache_axi_wrapper import ariane_pkg::*; import wt_cache_pkg::*; #(
     .wr_id_o         (                   ),
     .wr_exokay_o     (                   ),
     .axi_req_o       ( axi_req_o         ),
-    .axi_resp_i      ( axi_resp_i        )
+    .axi_resp_i      ( axi_resp_i        ),
+    .patid_i         ( patid_i           )
   );
 
   // Buffer burst data in shift register
