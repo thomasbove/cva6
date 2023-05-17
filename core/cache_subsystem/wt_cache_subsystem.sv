@@ -189,7 +189,7 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
     .dcache_rtrn_o      ( adapter_dcache          ),
     .axi_req_o          ( axi_req_o               ),
     .axi_resp_i         ( axi_resp_i              ),
-    .patid              ( patid_i                 )
+    .patid_i            ( patid_i                 )
   );
 `endif
 
