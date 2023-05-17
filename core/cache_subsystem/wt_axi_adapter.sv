@@ -44,7 +44,9 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
 
   // AXI port
   output axi_req_t             axi_req_o,
-  input  axi_rsp_t             axi_resp_i
+  input  axi_rsp_t             axi_resp_i,
+  // llc partition
+  input  logic [riscv::XLEN-1:0] patid_i
 );
 
   // support up to 512bit cache lines
@@ -629,7 +631,8 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
     .wr_id_o         ( axi_wr_id_out     ),
     .wr_exokay_o     ( axi_wr_exokay     ),
     .axi_req_o       ( axi_req_o         ),
-    .axi_resp_i      ( axi_resp_i        )
+    .axi_resp_i      ( axi_resp_i        ),
+    .patid_i         ( patid             )
   );
 
 ///////////////////////////////////////////////////////

@@ -99,9 +99,7 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
   // to forwarding logic and miss unit
   output wbuffer_t  [DCACHE_WBUF_DEPTH-1:0]  wbuffer_data_o,
   output logic [DCACHE_MAX_TX-1:0][riscv::PLEN-1:0]     tx_paddr_o,      // used to check for address collisions with read operations
-  output logic [DCACHE_MAX_TX-1:0]           tx_vld_o,
-  // llc set-based partition
-  input  logic [riscv::XLEN-1:0]             patid_i
+  output logic [DCACHE_MAX_TX-1:0]           tx_vld_o
 );
 
   tx_stat_t [DCACHE_MAX_TX-1:0]             tx_stat_d, tx_stat_q;
@@ -198,7 +196,7 @@ module wt_dcache_wbuffer import ariane_pkg::*; import wt_cache_pkg::*; #(
     assign miss_wuser_o = riscv::IS_XLEN64 ? repData64(wbuffer_dirty_mux.user, bdirty_off, miss_size_o[1:0]):
                                              repData32(wbuffer_dirty_mux.user, bdirty_off, miss_size_o[1:0]);
   end else begin
-    assign miss_wuser_o = patid_i;
+    assign miss_wuser_o = '0;
   end
 
   assign tx_be        = riscv::IS_XLEN64 ? to_byte_enable8(bdirty_off, miss_size_o[1:0]):

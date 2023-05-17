@@ -139,8 +139,7 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
     .mem_rtrn_i      ( adapter_dcache          ),
     .mem_data_req_o  ( dcache_adapter_data_req ),
     .mem_data_ack_i  ( adapter_dcache_data_ack ),
-    .mem_data_o      ( dcache_adapter          ),
-    .patid_i         ( patid_i                 )
+    .mem_data_o      ( dcache_adapter          )
   );
 
 
@@ -189,7 +188,8 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
     .dcache_rtrn_vld_o  ( adapter_dcache_rtrn_vld ),
     .dcache_rtrn_o      ( adapter_dcache          ),
     .axi_req_o          ( axi_req_o               ),
-    .axi_resp_i         ( axi_resp_i              )
+    .axi_resp_i         ( axi_resp_i              ),
+    .patid              ( patid_i                 )
   );
 `endif
 
