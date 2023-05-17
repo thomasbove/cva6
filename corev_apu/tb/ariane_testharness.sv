@@ -568,7 +568,7 @@ module ariane_testharness #(
   reg_a32_d32_rsp_t reg_conf_resp;
 
   // axi2apb interface
-  logic         llc_conf__penable;
+  logic         llc_conf_penable;
   logic         llc_conf_pwrite;
   logic [31:0]  llc_conf_paddr;
   logic         llc_conf_psel;
