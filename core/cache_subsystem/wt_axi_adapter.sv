@@ -632,7 +632,7 @@ module wt_axi_adapter import ariane_pkg::*; import wt_cache_pkg::*; #(
     .wr_exokay_o     ( axi_wr_exokay     ),
     .axi_req_o       ( axi_req_o         ),
     .axi_resp_i      ( axi_resp_i        ),
-    .patid_i         ( patid             )
+    .patid_i         ( patid_i           )
   );
 
 ///////////////////////////////////////////////////////
