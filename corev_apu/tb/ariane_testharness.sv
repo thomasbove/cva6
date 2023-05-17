@@ -561,39 +561,120 @@ module ariane_testharness #(
 
   // convert config signals for llc from AXI to register interface
   // reg*: register interface signals
-  // llc*: AXI slave type signals
+  // llc*: AXI slave/llc type signals, signal after llc needs one more ID bit
+  // AXI (A64D64) <=> APB (A32D32) <=> REG (A32D32)
 
   reg_a32_d32_req_t reg_conf_req;
   reg_a32_d32_rsp_t reg_conf_resp;
 
-  ariane_axi_soc::req_t   llc_conf_req;
-  ariane_axi_soc::resp_t  llc_conf_resp;
+  // axi2apb interface
+  logic         llc_conf__penable;
+  logic         llc_conf_pwrite;
+  logic [31:0]  llc_conf_paddr;
+  logic         llc_conf_psel;
+  logic [31:0]  llc_conf_pwdata;
+  logic [31:0]  llc_conf_prdata;
+  logic         llc_conf_pready;
+  logic         llc_conf_pslverr;
 
-  `AXI_ASSIGN_TO_REQ(llc_conf_req, master[ariane_soc::LLCCfg])
-  `AXI_ASSIGN_FROM_RESP(master[ariane_soc::LLCCfg], llc_conf_resp)
-
-  // axi2reg interface
-  axi_to_reg #(
-    .ADDR_WIDTH         ( REG_BUS_ADDR_WIDTH         ),
-    .DATA_WIDTH         ( REG_BUS_DATA_WIDTH         ),
-    .ID_WIDTH           ( ariane_soc::IdWidthSlave   ),
-    .USER_WIDTH         ( AXI_USER_WIDTH             ),
-    .AXI_MAX_WRITE_TXNS ( 32'd2                      ),
-    .AXI_MAX_READ_TXNS  ( 32'd2                      ),
-    .DECOUPLE_W         ( 1                          ),
-    .axi_req_t          ( ariane_axi_soc::req_t      ),
-    .axi_rsp_t          ( ariane_axi_soc::resp_t     ),
-    .reg_req_t          ( reg_a32_d32_req_t          ),
-    .reg_rsp_t          ( reg_a32_d32_rsp_t          )
-  ) i_axi_to_reg (
-    .clk_i      ( clk_i           ),
-    .rst_ni     ( rst_ni          ),
-    .testmode_i ( test_en         ),
-    .axi_req_i  ( llc_conf_req    ),
-    .axi_rsp_o  ( llc_conf_resp   ),
-    .reg_req_o  ( reg_conf_req    ),
-    .reg_rsp_i  ( reg_conf_resp   )
+  axi2apb_64_32 #(
+      .AXI4_ADDRESS_WIDTH ( AXI_ADDRESS_WIDTH  ),
+      .AXI4_RDATA_WIDTH   ( AXI_DATA_WIDTH  ),
+      .AXI4_WDATA_WIDTH   ( AXI_DATA_WIDTH  ),
+      .AXI4_ID_WIDTH      ( ariane_soc::IdWidthSlave ),
+      .AXI4_USER_WIDTH    ( 1             ),
+      .BUFF_DEPTH_SLAVE   ( 2             ),
+      .APB_ADDR_WIDTH     ( 32            )
+  ) i_axi2apb_64_32_llc (
+      .ACLK      ( clk_i          ),
+      .ARESETn   ( rst_ni         ),
+      .test_en_i ( 1'b0           ),
+      .AWID_i    ( master[ariane_soc::LLCCfg].aw_id     ),
+      .AWADDR_i  ( master[ariane_soc::LLCCfg].aw_addr   ),
+      .AWLEN_i   ( master[ariane_soc::LLCCfg].aw_len    ),
+      .AWSIZE_i  ( master[ariane_soc::LLCCfg].aw_size   ),
+      .AWBURST_i ( master[ariane_soc::LLCCfg].aw_burst  ),
+      .AWLOCK_i  ( master[ariane_soc::LLCCfg].aw_lock   ),
+      .AWCACHE_i ( master[ariane_soc::LLCCfg].aw_cache  ),
+      .AWPROT_i  ( master[ariane_soc::LLCCfg].aw_prot   ),
+      .AWREGION_i( master[ariane_soc::LLCCfg].aw_region ),
+      .AWUSER_i  ( master[ariane_soc::LLCCfg].aw_user   ),
+      .AWQOS_i   ( master[ariane_soc::LLCCfg].aw_qos    ),
+      .AWVALID_i ( master[ariane_soc::LLCCfg].aw_valid  ),
+      .AWREADY_o ( master[ariane_soc::LLCCfg].aw_ready  ),
+      .WDATA_i   ( master[ariane_soc::LLCCfg].w_data    ),
+      .WSTRB_i   ( master[ariane_soc::LLCCfg].w_strb    ),
+      .WLAST_i   ( master[ariane_soc::LLCCfg].w_last    ),
+      .WUSER_i   ( master[ariane_soc::LLCCfg].w_user    ),
+      .WVALID_i  ( master[ariane_soc::LLCCfg].w_valid   ),
+      .WREADY_o  ( master[ariane_soc::LLCCfg].w_ready   ),
+      .BID_o     ( master[ariane_soc::LLCCfg].b_id      ),
+      .BRESP_o   ( master[ariane_soc::LLCCfg].b_resp    ),
+      .BVALID_o  ( master[ariane_soc::LLCCfg].b_valid   ),
+      .BUSER_o   ( master[ariane_soc::LLCCfg].b_user    ),
+      .BREADY_i  ( master[ariane_soc::LLCCfg].b_ready   ),
+      .ARID_i    ( master[ariane_soc::LLCCfg].ar_id     ),
+      .ARADDR_i  ( master[ariane_soc::LLCCfg].ar_addr   ),
+      .ARLEN_i   ( master[ariane_soc::LLCCfg].ar_len    ),
+      .ARSIZE_i  ( master[ariane_soc::LLCCfg].ar_size   ),
+      .ARBURST_i ( master[ariane_soc::LLCCfg].ar_burst  ),
+      .ARLOCK_i  ( master[ariane_soc::LLCCfg].ar_lock   ),
+      .ARCACHE_i ( master[ariane_soc::LLCCfg].ar_cache  ),
+      .ARPROT_i  ( master[ariane_soc::LLCCfg].ar_prot   ),
+      .ARREGION_i( master[ariane_soc::LLCCfg].ar_region ),
+      .ARUSER_i  ( master[ariane_soc::LLCCfg].ar_user   ),
+      .ARQOS_i   ( master[ariane_soc::LLCCfg].ar_qos    ),
+      .ARVALID_i ( master[ariane_soc::LLCCfg].ar_valid  ),
+      .ARREADY_o ( master[ariane_soc::LLCCfg].ar_ready  ),
+      .RID_o     ( master[ariane_soc::LLCCfg].r_id      ),
+      .RDATA_o   ( master[ariane_soc::LLCCfg].r_data    ),
+      .RRESP_o   ( master[ariane_soc::LLCCfg].r_resp    ),
+      .RLAST_o   ( master[ariane_soc::LLCCfg].r_last    ),
+      .RUSER_o   ( master[ariane_soc::LLCCfg].r_user    ),
+      .RVALID_o  ( master[ariane_soc::LLCCfg].r_valid   ),
+      .RREADY_i  ( master[ariane_soc::LLCCfg].r_ready   ),
+      .PENABLE   ( llc_conf_penable   ),
+      .PWRITE    ( llc_conf_pwrite    ),
+      .PADDR     ( llc_conf_paddr     ),
+      .PSEL      ( llc_conf_psel      ),
+      .PWDATA    ( llc_conf_pwdata    ),
+      .PRDATA    ( llc_conf_prdata    ),
+      .PREADY    ( llc_conf_pready    ),
+      .PSLVERR   ( llc_conf_pslverr   )
   );
+
+  // apb2reg interface
+
+  REG_BUS #(
+      .ADDR_WIDTH ( 32 ),
+      .DATA_WIDTH ( 32 )
+  ) llc_reg_bus (clk_i);
+
+  apb_to_reg i_llc_apb_to_reg (
+      .clk_i     ( clk_i        ),
+      .rst_ni    ( rst_ni       ),
+      .penable_i ( llc_conf_penable ),
+      .pwrite_i  ( llc_conf_pwrite  ),
+      .paddr_i   ( llc_conf_paddr   ),
+      .psel_i    ( llc_conf_psel    ),
+      .pwdata_i  ( llc_conf_pwdata  ),
+      .prdata_o  ( llc_conf_prdata  ),
+      .pready_o  ( llc_conf_pready  ),
+      .pslverr_o ( llc_conf_pslverr ),
+      .reg_o     ( llc_reg_bus      )
+  );
+
+  assign reg_conf_req.addr  = llc_reg_bus.addr;
+  assign reg_conf_req.write = llc_reg_bus.write;
+  assign reg_conf_req.wdata = llc_reg_bus.wdata;
+  assign reg_conf_req.wstrb = llc_reg_bus.wstrb;
+  assign reg_conf_req.valid = llc_reg_bus.valid;
+
+  assign llc_reg_bus.rdata = reg_conf_resp.rdata;
+  assign llc_reg_bus.error = reg_conf_resp.error;
+  assign llc_reg_bus.ready = reg_conf_resp.ready;
+
+
 
   // TODO: parameterize the llc
   axi_llc_reg_wrap #(
