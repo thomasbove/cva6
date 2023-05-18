@@ -727,7 +727,6 @@ assign seip = irq[1];
 // When in CLIC mode, the timer interrupt is routed through the CLIC and not
 // directly to the HART
 localparam int unsigned NumTimerIrq = 1; // 1 target, cva6
-logic timer_irq;
 
 // Machine Software interrupt
 // When in CLIC mode, msip can be fired by writing to the corresponding
