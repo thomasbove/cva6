@@ -848,7 +848,7 @@ module ariane_testharness #(
       .ipi_i                ( ipi[i]              ),
       .time_irq_i           ( timer_irq[i]        ),
   `ifdef RVFI_PORT
-      .rvfi_o               ( rvfi                ),
+      .rvfi_o               ( rvfi[i]             ),
   `else
       .rvfi_o               (                     ),
   `endif
@@ -856,7 +856,7 @@ module ariane_testharness #(
   `ifdef SPIKE_TANDEM
       .debug_req_i          ( 1'b0                ),
   `else
-      .debug_req_i          ( debug_req_core      ),
+      .debug_req_i          ( debug_req_core[i]   ),
   `endif
       // CLIC
       .clic_irq_valid_i     ( core_irq_valid      ),
@@ -905,7 +905,7 @@ module ariane_testharness #(
     ) rvfi_tracer_i (
       .clk_i(clk_i),
       .rst_ni(rst_ni),
-      .rvfi_i(rvfi),
+      .rvfi_i(rvfi[i]),
       .end_of_test_o(rvfi_exit_tmp)
     );
 
