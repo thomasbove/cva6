@@ -14,6 +14,8 @@
 //              Instantiates an AXI-Bus and memories
 
 `include "axi/assign.svh"
+`include "axi/typedef.svh"
+`include "register_interface/typedef.svh"
 
 module ariane_testharness #(
   parameter int unsigned AXI_USER_WIDTH    = ariane_pkg::AXI_USER_WIDTH,
@@ -606,6 +608,136 @@ module ariane_testharness #(
   uart_bus #(.BAUD_RATE(115200), .PARITY_EN(0)) i_uart_bus (.rx(tx), .tx(rx), .rx_en(1'b1));
 
   // ---------------
+  // CLIC mem ports
+  // ---------------
+
+  ariane_axi_soc::req_slv_t  axi_clic_req;
+  ariane_axi_soc::resp_slv_t axi_clic_resp;
+
+  `AXI_ASSIGN_TO_REQ(axi_clic_req, master[ariane_soc::CLIC])
+  `AXI_ASSIGN_FROM_RESP(master[ariane_soc::CLIC], axi_clic_resp)
+
+  `AXI_TYPEDEF_ALL(axi_d32, ariane_axi_soc::addr_t, ariane_axi_soc::id_slv_t, logic [31:0], logic [3:0], ariane_axi_soc::user_t)
+  axi_d32_req_t  axi_d32_clic_req;
+  axi_d32_resp_t axi_d32_clic_resp;
+
+  localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
+  localparam int unsigned REG_BUS_DATA_WIDTH = 32;
+
+  `REG_BUS_TYPEDEF_ALL(reg,
+                       logic [REG_BUS_ADDR_WIDTH-1:0],
+                       logic [REG_BUS_DATA_WIDTH-1:0],
+                       logic [REG_BUS_DATA_WIDTH/8-1:0])
+
+  reg_req_t reg_req, err_req;
+  reg_rsp_t reg_rsp, err_rsp;
+  reg_req_t [ariane_soc::NumHarts-1:0] clic_req;
+  reg_rsp_t [ariane_soc::NumHarts-1:0] clic_rsp;
+
+  typedef struct packed {
+    int unsigned                   idx;
+    logic [REG_BUS_ADDR_WIDTH-1:0] start_addr;
+    logic [REG_BUS_ADDR_WIDTH-1:0] end_addr;
+  } reg_rule_t;
+
+  reg_rule_t [ariane_soc::NumHarts-1:0] reg_map;
+  for (genvar i = 0; i < ariane_soc::NumHarts; i++) begin
+    assign reg_map[i] = '{ idx: i, start_addr: ariane_soc::CLICBase+32'h40000*i, end_addr: ariane_soc::CLICBase+32'h40000*(i+1)};
+  end
+
+  localparam DecodeIdxWidth = cf_math_pkg::idx_width(ariane_soc::NumHarts+1);
+  logic [cf_math_pkg::idx_width(ariane_soc::NumHarts+1)-1:0] reg_select;
+
+  // Convert to 32-bit reg datawidth
+  axi_dw_converter #(
+    .AxiSlvPortDataWidth  ( ariane_axi::DataWidth         ),
+    .AxiMstPortDataWidth  ( 32                            ),
+    .AxiAddrWidth         ( ariane_axi::AddrWidth         ),
+    .AxiIdWidth           ( ariane_soc::IdWidthSlave      ),
+    .aw_chan_t            ( ariane_axi_soc::aw_chan_slv_t ),
+    .mst_w_chan_t         ( axi_d32_w_chan_t              ),
+    .slv_w_chan_t         ( ariane_axi::w_chan_t          ),
+    .b_chan_t             ( ariane_axi_soc::b_chan_slv_t  ),
+    .ar_chan_t            ( ariane_axi_soc::ar_chan_slv_t ),
+    .mst_r_chan_t         ( axi_d32_r_chan_t              ),
+    .slv_r_chan_t         ( ariane_axi_soc::r_chan_slv_t  ),
+    .axi_mst_req_t        ( axi_d32_req_t                 ),
+    .axi_mst_resp_t       ( axi_d32_resp_t                ),
+    .axi_slv_req_t        ( ariane_axi_soc::req_slv_t     ),
+    .axi_slv_resp_t       ( ariane_axi_soc::resp_slv_t    )
+  ) i_reg_axi_dw_converter (
+    .clk_i,
+    .rst_ni,
+    .slv_req_i  ( axi_clic_req      ),
+    .slv_resp_o ( axi_clic_resp     ),
+    .mst_req_o  ( axi_d32_clic_req  ),
+    .mst_resp_i ( axi_d32_clic_resp )
+  );
+
+  // Convert from AXI to reg protocol
+  axi_to_reg #(
+    .ADDR_WIDTH         ( ariane_axi::AddrWidth    ),
+    .DATA_WIDTH         ( REG_BUS_DATA_WIDTH       ),
+    .ID_WIDTH           ( ariane_soc::IdWidthSlave ),
+    .USER_WIDTH         ( ariane_axi::UserWidth    ),
+    .AXI_MAX_WRITE_TXNS ( 1                        ),
+    .AXI_MAX_READ_TXNS  ( 1                        ),
+    .DECOUPLE_W         ( 1                        ),
+    .axi_req_t          ( axi_d32_req_t            ),
+    .axi_rsp_t          ( axi_d32_resp_t           ),
+    .reg_req_t          ( reg_req_t                ),
+    .reg_rsp_t          ( reg_rsp_t                )
+  ) i_reg_axi_to_reg (
+    .clk_i,
+    .rst_ni,
+    .testmode_i  ( '0                ),
+    .axi_req_i   ( axi_d32_clic_req  ),
+    .axi_rsp_o   ( axi_d32_clic_resp ),
+    .reg_req_o   ( reg_req           ),
+    .reg_rsp_i   ( reg_rsp           )
+  );
+
+  // Non-matching addresses are directed to an error slave
+  addr_decode #(
+    .NoIndices  ( ariane_soc::NumHarts + 1       ),
+    .NoRules    ( ariane_soc::NumHarts           ),
+    .addr_t     ( logic [REG_BUS_ADDR_WIDTH-1:0] ),
+    .rule_t     ( reg_rule_t                     )
+  ) i_reg_demux_decode (
+    .addr_i           ( reg_req.addr         ),
+    .addr_map_i       ( reg_map              ),
+    .idx_o            ( reg_select           ),
+    .dec_valid_o      (                      ),
+    .dec_error_o      (                      ),
+    .en_default_idx_i ( 1'b1                 ),
+    .default_idx_i    ( DecodeIdxWidth'(ariane_soc::NumHarts) )
+  );
+
+  reg_demux #(
+    .NoPorts  ( ariane_soc::NumHarts + 1 ),
+    .req_t    ( reg_req_t                ),
+    .rsp_t    ( reg_rsp_t                )
+  ) i_reg_demux (
+    .clk_i,
+    .rst_ni,
+    .in_select_i  ( reg_select            ),
+    .in_req_i     ( reg_req               ),
+    .in_rsp_o     ( reg_rsp               ),
+    .out_req_o    ( { err_req, clic_req } ),
+    .out_rsp_i    ( { err_rsp, clic_rsp } )
+  );
+
+  reg_err_slv #(
+    .DW       ( 32           ),
+    .ERR_VAL  ( 32'hBADCAB1E ),
+    .req_t    ( reg_req_t    ),
+    .rsp_t    ( reg_rsp_t    )
+  ) i_reg_err_slv (
+    .req_i  ( err_req ),
+    .rsp_o  ( err_rsp )
+  );
+
+  // ---------------
   // Cores
   // ---------------
   ariane_axi::req_t  [0:ariane_soc::NumHarts-1]  axi_ariane_req;
@@ -666,143 +798,6 @@ module ariane_testharness #(
       clint_irqs                               // 64  (XLEN regular clint interrupts)
     };
 
-    // axi2apb interface
-    logic         clic_penable;
-    logic         clic_pwrite;
-    logic [31:0]  clic_paddr;
-    logic         clic_psel;
-    logic [31:0]  clic_pwdata;
-    logic [31:0]  clic_prdata;
-    logic         clic_pready;
-    logic         clic_pslverr;
-
-    axi2apb_64_32 #(
-        .AXI4_ADDRESS_WIDTH ( AXI_ADDRESS_WIDTH  ),
-        .AXI4_RDATA_WIDTH   ( AXI_DATA_WIDTH  ),
-        .AXI4_WDATA_WIDTH   ( AXI_DATA_WIDTH  ),
-        .AXI4_ID_WIDTH      ( ariane_soc::IdWidthSlave ),
-        .AXI4_USER_WIDTH    ( 1             ),
-        .BUFF_DEPTH_SLAVE   ( 2             ),
-        .APB_ADDR_WIDTH     ( 32            )
-    ) i_axi2apb_64_32_clic (
-        .ACLK      ( clk_i          ),
-        .ARESETn   ( rst_ni         ),
-        .test_en_i ( 1'b0           ),
-        .AWID_i    ( master[ariane_soc::CLIC].aw_id     ),
-        .AWADDR_i  ( master[ariane_soc::CLIC].aw_addr   ),
-        .AWLEN_i   ( master[ariane_soc::CLIC].aw_len    ),
-        .AWSIZE_i  ( master[ariane_soc::CLIC].aw_size   ),
-        .AWBURST_i ( master[ariane_soc::CLIC].aw_burst  ),
-        .AWLOCK_i  ( master[ariane_soc::CLIC].aw_lock   ),
-        .AWCACHE_i ( master[ariane_soc::CLIC].aw_cache  ),
-        .AWPROT_i  ( master[ariane_soc::CLIC].aw_prot   ),
-        .AWREGION_i( master[ariane_soc::CLIC].aw_region ),
-        .AWUSER_i  ( master[ariane_soc::CLIC].aw_user   ),
-        .AWQOS_i   ( master[ariane_soc::CLIC].aw_qos    ),
-        .AWVALID_i ( master[ariane_soc::CLIC].aw_valid  ),
-        .AWREADY_o ( master[ariane_soc::CLIC].aw_ready  ),
-        .WDATA_i   ( master[ariane_soc::CLIC].w_data    ),
-        .WSTRB_i   ( master[ariane_soc::CLIC].w_strb    ),
-        .WLAST_i   ( master[ariane_soc::CLIC].w_last    ),
-        .WUSER_i   ( master[ariane_soc::CLIC].w_user    ),
-        .WVALID_i  ( master[ariane_soc::CLIC].w_valid   ),
-        .WREADY_o  ( master[ariane_soc::CLIC].w_ready   ),
-        .BID_o     ( master[ariane_soc::CLIC].b_id      ),
-        .BRESP_o   ( master[ariane_soc::CLIC].b_resp    ),
-        .BVALID_o  ( master[ariane_soc::CLIC].b_valid   ),
-        .BUSER_o   ( master[ariane_soc::CLIC].b_user    ),
-        .BREADY_i  ( master[ariane_soc::CLIC].b_ready   ),
-        .ARID_i    ( master[ariane_soc::CLIC].ar_id     ),
-        .ARADDR_i  ( master[ariane_soc::CLIC].ar_addr   ),
-        .ARLEN_i   ( master[ariane_soc::CLIC].ar_len    ),
-        .ARSIZE_i  ( master[ariane_soc::CLIC].ar_size   ),
-        .ARBURST_i ( master[ariane_soc::CLIC].ar_burst  ),
-        .ARLOCK_i  ( master[ariane_soc::CLIC].ar_lock   ),
-        .ARCACHE_i ( master[ariane_soc::CLIC].ar_cache  ),
-        .ARPROT_i  ( master[ariane_soc::CLIC].ar_prot   ),
-        .ARREGION_i( master[ariane_soc::CLIC].ar_region ),
-        .ARUSER_i  ( master[ariane_soc::CLIC].ar_user   ),
-        .ARQOS_i   ( master[ariane_soc::CLIC].ar_qos    ),
-        .ARVALID_i ( master[ariane_soc::CLIC].ar_valid  ),
-        .ARREADY_o ( master[ariane_soc::CLIC].ar_ready  ),
-        .RID_o     ( master[ariane_soc::CLIC].r_id      ),
-        .RDATA_o   ( master[ariane_soc::CLIC].r_data    ),
-        .RRESP_o   ( master[ariane_soc::CLIC].r_resp    ),
-        .RLAST_o   ( master[ariane_soc::CLIC].r_last    ),
-        .RUSER_o   ( master[ariane_soc::CLIC].r_user    ),
-        .RVALID_o  ( master[ariane_soc::CLIC].r_valid   ),
-        .RREADY_i  ( master[ariane_soc::CLIC].r_ready   ),
-        .PENABLE   ( clic_penable   ),
-        .PWRITE    ( clic_pwrite    ),
-        .PADDR     ( clic_paddr     ),
-        .PSEL      ( clic_psel      ),
-        .PWDATA    ( clic_pwdata    ),
-        .PRDATA    ( clic_prdata    ),
-        .PREADY    ( clic_pready    ),
-        .PSLVERR   ( clic_pslverr   )
-    );
-
-    // apb2reg interface
-
-    REG_BUS #(
-        .ADDR_WIDTH ( 32 ),
-        .DATA_WIDTH ( 32 )
-    ) reg_bus (clk_i);
-
-    apb_to_reg i_apb_to_reg (
-        .clk_i     ( clk_i        ),
-        .rst_ni    ( rst_ni       ),
-        .penable_i ( clic_penable ),
-        .pwrite_i  ( clic_pwrite  ),
-        .paddr_i   ( clic_paddr   ),
-        .psel_i    ( clic_psel    ),
-        .pwdata_i  ( clic_pwdata  ),
-        .prdata_o  ( clic_prdata  ),
-        .pready_o  ( clic_pready  ),
-        .pslverr_o ( clic_pslverr ),
-        .reg_o     ( reg_bus      )
-    );
-
-    // wrap register interface as req/resp for clic
-    localparam int unsigned REG_BUS_ADDR_WIDTH = 32;
-    localparam int unsigned REG_BUS_DATA_WIDTH = 32;
-
-  `define REG_BUS_TYPEDEF_REQ(req_t, addr_t, data_t, strb_t) \
-      typedef struct packed { \
-          addr_t addr; \
-          logic  write; \
-          data_t wdata; \
-          strb_t wstrb; \
-          logic  valid; \
-      } req_t;
-
-  `define REG_BUS_TYPEDEF_RSP(rsp_t, data_t) \
-      typedef struct packed { \
-          data_t rdata; \
-          logic  error; \
-          logic  ready; \
-      } rsp_t;
-
-    typedef logic [REG_BUS_ADDR_WIDTH-1:0] addr_t;
-    typedef logic [REG_BUS_DATA_WIDTH-1:0] data_t;
-    typedef logic [REG_BUS_DATA_WIDTH/8-1:0] strb_t;
-
-    `REG_BUS_TYPEDEF_REQ(reg_a32_d32_req_t, addr_t, data_t, strb_t)
-    `REG_BUS_TYPEDEF_RSP(reg_a32_d32_rsp_t, data_t)
-
-    reg_a32_d32_req_t clic_req;
-    reg_a32_d32_rsp_t clic_rsp;
-
-    assign clic_req.addr  = reg_bus.addr;
-    assign clic_req.write = reg_bus.write;
-    assign clic_req.wdata = reg_bus.wdata;
-    assign clic_req.wstrb = reg_bus.wstrb;
-    assign clic_req.valid = reg_bus.valid;
-
-    assign reg_bus.rdata = clic_rsp.rdata;
-    assign reg_bus.error = clic_rsp.error;
-    assign reg_bus.ready = clic_rsp.ready;
-
     // coproc
     cvxif_pkg::cvxif_req_t  cvxif_req;
     cvxif_pkg::cvxif_resp_t cvxif_resp;
@@ -818,16 +813,16 @@ module ariane_testharness #(
     clic #(
       .N_SOURCE  (ariane_soc::CLICNumInterruptSrc),
       .INTCTLBITS(ariane_soc::CLICIntCtlBits),
-      .reg_req_t (reg_a32_d32_req_t),
-      .reg_rsp_t (reg_a32_d32_rsp_t),
+      .reg_req_t (reg_req_t),
+      .reg_rsp_t (reg_rsp_t),
       .SSCLIC    (1),
       .USCLIC    (0)
     ) i_clic (
       .clk_i(clk_i),
       .rst_ni(ndmreset_n),
       // Bus Interface
-      .reg_req_i(clic_req),
-      .reg_rsp_o(clic_rsp),
+      .reg_req_i(clic_req[i]),
+      .reg_rsp_o(clic_rsp[i]),
       // Interrupt Sources
       .intr_src_i (clic_irqs),
       // Interrupt notification to core
