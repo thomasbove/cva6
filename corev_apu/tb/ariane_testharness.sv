@@ -632,8 +632,8 @@ module ariane_testharness #(
     // External interrupts. When not in CLIC mode, they are seen as global
     // interrupts and routed through the PLIC to meip/seip.
     logic meip, seip;
-    assign meip = irqs[0];
-    assign seip = irqs[1];
+    assign meip = irqs[i][0];
+    assign seip = irqs[i][1];
 
     // Machine Timer interrupt
     // Generate timer interrupt from a real-time clock (rtc).
@@ -900,6 +900,9 @@ module ariane_testharness #(
         end
       end
 
+      logic [31:0] rvfi_exit_tmp;
+      if (i == 0) assign rvfi_exit = rvfi_exit_tmp;
+
     rvfi_tracer  #(
       .HART_ID(i),
       .DEBUG_START(0),
@@ -907,7 +910,8 @@ module ariane_testharness #(
     ) rvfi_tracer_i (
       .clk_i(clk_i),
       .rst_ni(rst_ni),
-      .rvfi_i(rvfi)
+      .rvfi_i(rvfi),
+      .end_of_test_o(rvfi_exit_tmp)
     );
 
     end
