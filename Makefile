@@ -170,6 +170,10 @@ src :=  core/include/$(target)_config_pkg.sv                                    
         corev_apu/riscv-dbg/src/dm_top.sv                                            \
         corev_apu/riscv-dbg/debug_rom/debug_rom.sv                                   \
         corev_apu/register_interface/src/apb_to_reg.sv                               \
+        corev_apu/register_interface/src/axi_to_reg.sv                               \
+        corev_apu/register_interface/src/reg_demux.sv                                \
+        corev_apu/register_interface/src/reg_err_slv.sv                              \
+        corev_apu/register_interface/src/axi_lite_to_reg.sv                          \
         vendor/pulp-platform/axi/src/axi_multicut.sv                                 \
         vendor/pulp-platform/common_cells/src/rstgen_bypass.sv                       \
         vendor/pulp-platform/common_cells/src/rstgen.sv                              \
@@ -185,6 +189,10 @@ src :=  core/include/$(target)_config_pkg.sv                                    
         vendor/pulp-platform/axi/src/axi_mux.sv                                      \
         vendor/pulp-platform/axi/src/axi_demux.sv                                    \
         vendor/pulp-platform/axi/src/axi_xbar.sv                                     \
+        vendor/pulp-platform/axi/src/axi_burst_splitter.sv                           \
+        vendor/pulp-platform/axi/src/axi_dw_upsizer.sv                               \
+        vendor/pulp-platform/axi/src/axi_dw_downsizer.sv                             \
+        vendor/pulp-platform/axi/src/axi_dw_converter.sv                             \
         vendor/pulp-platform/common_cells/src/cdc_2phase.sv                          \
         vendor/pulp-platform/common_cells/src/spill_register_flushable.sv            \
         vendor/pulp-platform/common_cells/src/spill_register.sv                      \
