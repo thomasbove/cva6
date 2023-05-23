@@ -901,7 +901,7 @@ module ariane_testharness #(
       end
 
     rvfi_tracer  #(
-      .HART_ID(hart_id),
+      .HART_ID(i),
       .DEBUG_START(0),
       .DEBUG_STOP(0)
     ) rvfi_tracer_i (
