@@ -67,7 +67,9 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
 `else
   // memory side
   output axi_req_t                       axi_req_o,
-  input  axi_rsp_t                       axi_resp_i
+  input  axi_rsp_t                       axi_resp_i,
+  // llc patid
+  input  logic [riscv::XLEN-1:0]         patid_i 
 `endif
   // TODO: interrupt interface
 );
@@ -191,7 +193,8 @@ module wt_cache_subsystem import ariane_pkg::*; import wt_cache_pkg::*; #(
     .dcache_rtrn_vld_o  ( adapter_dcache_rtrn_vld ),
     .dcache_rtrn_o      ( adapter_dcache          ),
     .axi_req_o          ( axi_req_o               ),
-    .axi_resp_i         ( axi_resp_i              )
+    .axi_resp_i         ( axi_resp_i              ),
+    .patid_i            ( patid_i                 )
   );
 `endif
 

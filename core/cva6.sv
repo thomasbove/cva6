@@ -637,6 +637,7 @@ module cva6 import ariane_pkg::*; #(
   // ---------
   // CSR
   // ---------
+  logic [riscv::XLEN-1:0] patid;
   csr_regfile #(
     .AsidWidth              ( ASID_WIDTH                    ),
     .VmidWidth              ( VMID_WIDTH                    ),
@@ -717,6 +718,7 @@ module cva6 import ariane_pkg::*; #(
     .ipi_i,
     .irq_i,
     .time_irq_i,
+    .patid_o                ( patid                         ),
     .*
   );
 
@@ -855,7 +857,8 @@ module cva6 import ariane_pkg::*; #(
 `else
     // memory side
     .axi_req_o             ( axi_req_o                   ),
-    .axi_resp_i            ( axi_resp_i                  )
+    .axi_resp_i            ( axi_resp_i                  ),
+    .patid_i               ( patid                       )
 `endif
   );
   end else begin
@@ -904,7 +907,8 @@ module cva6 import ariane_pkg::*; #(
     .dcache_req_ports_o    ( dcache_req_ports_cache_ex   ),
     // memory side
     .axi_req_o             ( axi_req_o                   ),
-    .axi_resp_i            ( axi_resp_i                  )
+    .axi_resp_i            ( axi_resp_i                  ),
+    .patid_i               ( patid                       )
   );
   assign dcache_commit_wbuffer_not_ni = 1'b1;
   end

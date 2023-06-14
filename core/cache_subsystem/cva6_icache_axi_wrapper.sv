@@ -21,25 +21,27 @@ module cva6_icache_axi_wrapper import ariane_pkg::*; import wt_cache_pkg::*; #(
   parameter type axi_req_t = ariane_axi::req_t,
   parameter type axi_rsp_t = ariane_axi::resp_t
 ) (
-  input  logic              clk_i,
-  input  logic              rst_ni,
-  input riscv::priv_lvl_t   priv_lvl_i,
+  input  logic                    clk_i,
+  input  logic                    rst_ni,
+  input riscv::priv_lvl_t         priv_lvl_i,
 
-  input  logic              flush_i,     // flush the icache, flush and kill have to be asserted together
-  input  logic              en_i,        // enable icache
-  output logic              miss_o,      // to performance counter
-  output logic              busy_o,
-  input  logic              stall_i,
-  input  logic              init_ni,
+  input  logic                    flush_i,     // flush the icache, flush and kill have to be asserted together
+  input  logic                    en_i,        // enable icache
+  output logic                    miss_o,      // to performance counter
+  output logic                    busy_o,
+  input  logic                    stall_i,
+  input  logic                    init_ni,
   // address translation requests
-  input  icache_areq_i_t    areq_i,
-  output icache_areq_o_t    areq_o,
+  input  icache_areq_i_t          areq_i,
+  output icache_areq_o_t          areq_o,
   // data requests
-  input  icache_dreq_i_t    dreq_i,
-  output icache_dreq_o_t    dreq_o,
+  input  icache_dreq_i_t          dreq_i,
+  output icache_dreq_o_t          dreq_o,
   // AXI refill port
-  output axi_req_t          axi_req_o,
-  input  axi_rsp_t          axi_resp_i
+  output axi_req_t                axi_req_o,
+  input  axi_rsp_t                axi_resp_i,
+  // llc patid
+  input  logic [riscv::XLEN-1:0]  patid_i 
 );
 
   localparam AxiNumWords = (ICACHE_LINE_WIDTH/AxiDataWidth) * (ICACHE_LINE_WIDTH  > DCACHE_LINE_WIDTH)  +
@@ -169,7 +171,8 @@ module cva6_icache_axi_wrapper import ariane_pkg::*; import wt_cache_pkg::*; #(
     .wr_id_o         (                   ),
     .wr_exokay_o     (                   ),
     .axi_req_o       ( axi_req_o         ),
-    .axi_resp_i      ( axi_resp_i        )
+    .axi_resp_i      ( axi_resp_i        ),
+    .patid_i         ( patid_i           )
   );
 
   // Buffer burst data in shift register

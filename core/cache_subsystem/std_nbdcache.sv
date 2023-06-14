@@ -41,7 +41,9 @@ module std_nbdcache import std_cache_pkg::*; import ariane_pkg::*; #(
     output axi_req_t                       axi_data_o,
     input  axi_rsp_t                       axi_data_i,
     output axi_req_t                       axi_bypass_o,
-    input  axi_rsp_t                       axi_bypass_i
+    input  axi_rsp_t                       axi_bypass_i,
+    // llc patid
+    input  logic [riscv::XLEN-1:0]         patid_i 
 );
 
 import std_cache_pkg::*;
@@ -174,6 +176,7 @@ import std_cache_pkg::*;
         .axi_bypass_i,
         .axi_data_o,
         .axi_data_i,
+        .patid_i                ( patid_i              ),
         .*
     );
 

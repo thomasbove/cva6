@@ -650,7 +650,9 @@ package riscv;
         CSR_HPM_COUNTER_30 = 12'hC1E,  // reserved
         CSR_HPM_COUNTER_31 = 12'hC1F, // reserved
         // CLIC CSRs (Supervisor Mode)
-        CSR_SINTSTATUS     = 12'hDB1
+        CSR_SINTSTATUS     = 12'hDB1,
+        // LLC Patid CSR
+        CSR_PATID          = 12'hA00
     } csr_reg_t;
 
     localparam logic [63:0] SSTATUS_UIE  = 'h00000001;
