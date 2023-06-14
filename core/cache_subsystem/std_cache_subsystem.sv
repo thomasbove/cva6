@@ -98,7 +98,8 @@ module std_cache_subsystem import ariane_pkg::*; import std_cache_pkg::*; #(
         .dreq_i     ( icache_dreq_i         ),
         .dreq_o     ( icache_dreq_o         ),
         .axi_req_o  ( axi_req_icache        ),
-        .axi_resp_i ( axi_resp_icache       )
+        .axi_resp_i ( axi_resp_icache       ),
+        .patid_i    ( patid_i               )
     );
 
    // decreasing priority
