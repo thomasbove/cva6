@@ -104,7 +104,8 @@ module mult import ariane_pkg::*; (
     // Serial Divider
     // ---------------------
     serdiv #(
-        .WIDTH       ( riscv::XLEN )
+        .WIDTH       ( riscv::XLEN ),
+        .STABLE_HANDSHAKE(1)
     ) i_div (
         .clk_i       ( clk_i                ),
         .rst_ni      ( rst_ni               ),
