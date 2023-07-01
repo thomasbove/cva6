@@ -241,7 +241,7 @@ tbs := $(addprefix $(root-dir), $(tbs))
 
 # RISCV asm tests and benchmark setup (used for CI)
 # there is a definesd test-list with selected CI tests
-riscv-litmus-test-dir     := ../cva6-litmus/binaries/
+riscv-litmus-test-dir     := tmp/riscv-litmus-tests/binaries/
 riscv-litmus-tests-list   := ci/riscv-litmus-tests.list
 riscv-test-dir            := tmp/riscv-tests/build/isa/
 riscv-benchmarks-dir      := tmp/riscv-tests/build/benchmarks/
@@ -284,7 +284,7 @@ riscv-torture-bin    := java -jar sbt-launch.jar
 ifdef batch-mode
 	questa-flags += -c
 	questa-cmd   := -do "coverage save -onexit tmp/$@.ucdb; run -a; quit -code [coverage attribute -name TESTSTATUS -concise]"
-	questa-cmd   += -do " log -r /*; run -all;"
+	questa-cmd   += -do " run -all;"
 else
 	questa-cmd   := -do " log -r /*; run -all;"
 endif
@@ -362,16 +362,16 @@ generate-trace-vsim:
 
 sim: build
 	$(VSIM) +permissive $(questa-flags) $(questa-cmd) -wlf dump.wlf -lib $(library) +MAX_CYCLES=$(max_cycles) +UVM_TESTNAME=$(test_case) \
-	+BASEDIR=$(riscv-test-dir) $(uvm-flags) $(QUESTASIM_FLAGS) -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi  \
+	+BASEDIR=$(riscv-test-dir) $(uvm-flags) $(QUESTASIM_FLAGS) +debug_disable +tohost_addr=90000000 -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi  \
 	${top_level}_optimized +permissive-off ++$(elf-bin) ++$(target-options) | tee sim.log
 
-$(riscv-litmus-tests): build
-	$(VSIM) +permissive $(questa-flags) $(questa-cmd) +PRELOAD=$(riscv-litmus-test-dir)/$@ ++$(target-options) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
-	+BASEDIR=$(riscv-litmus-test-dir) $(uvm-flags) +jtag_rbb_enable=0  -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi        \
+$(riscv-litmus-tests): $(riscv-litmus-tests-list) build
+	$(VSIM) +permissive $(questa-flags) $(questa-cmd) +define+RVFI_PORT=1 +PRELOAD=$(riscv-litmus-test-dir)/$@ ++$(target-options) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
+	+BASEDIR=$(riscv-litmus-test-dir) $(uvm-flags) +jtag_rbb_enable=0 +debug_disable +tohost_addr=90000000 -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi        \
 	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++none | tee tmp/riscv-litmus-tests-$@.log
 
-find-litmus:
-	basename -a `find $(riscv-litmus-test-dir) -name "*.elf" | sed 's/\[/\\\[/g'` > $(riscv-litmus-tests-list)
+$(riscv-litmus-tests-list):
+	basename -a `find $(riscv-litmus-test-dir) -name "*.elf" | sed 's/\[/\\\[/g'` > $@
 
 $(riscv-asm-tests): build
 	$(VSIM) +permissive $(questa-flags) $(questa-cmd) -lib $(library) +max-cycles=$(max_cycles) +UVM_TESTNAME=$(test_case) \
@@ -408,8 +408,27 @@ $(riscv-benchmarks): build
 	+BASEDIR=$(riscv-benchmarks-dir) $(uvm-flags) +jtag_rbb_enable=0 -gblso $(SPIKE_ROOT)/lib/libfesvr.so -sv_lib $(dpi-library)/ariane_dpi   \
 	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++$(riscv-benchmarks-dir)/$@ ++$(target-options) | tee tmp/riscv-benchmarks-$@.log
 
+tmp/riscv-litmus-tests-%.uart.log: %
+	sed -n 's/^# \[UART\]: \(.*\S\)\s*$$/\1/p' tmp/riscv-litmus-tests-$<.log > $@
+
+tmp/riscv-litmus-tests-%.uart.log-verilator: %
+	sed -n 's/^# \[UART\]: \(.*\S\)\s*$$/\1/p' tmp/riscv-litmus-tests-$<.log > $@
+
+tmp/riscv-litmus-tests-%.litmus.log: tmp/riscv-litmus-tests-%.uart.log
+	echo "Test $(basename $* .elf) Allowed" > $@
+	echo "Histogram" >> $@
+	cat $< >> $@
+	echo "" >> $@
+
 # can use -jX to run ci tests in parallel using X processes
-run-litmus-tests: $(riscv-litmus-tests)
+run-litmus-tests: $(addprefix tmp/riscv-litmus-tests-, $(addsuffix .litmus.log,$(riscv-litmus-tests)))
+	cat $^ > litmus.log
+
+litmus.log:
+	cat tmp/*.litmus.log > $@
+
+check-litmus-tests: litmus.log
+	cd ${riscv-litmus-test-dir}/../ && ! ci/compare_model.sh | grep "Warning negative differences"
 
 run-asm-tests: $(riscv-asm-tests)
 	$(MAKE) check-asm-tests
@@ -667,6 +686,14 @@ $(addsuffix -verilator,$(riscv-clic-tests)): verilate
 riscv-hyp-test-verilator: verilate
 	$(ver-library)/Variane_testharness $(riscv-hyp-test)
 
+$(addsuffix -verilator,$(riscv-litmus-tests)): verilate
+	$(ver-library)/Variane_testharness $(riscv-litmus-test-dir)/$(subst -verilator,,$@) +debug_disable +tohost_addr=90000000 > tmp/$@.log
+	sed -rn '/^[0-9]+:>/,/Time/p' < tmp/$@.log > tmp/$@.uart.log
+	echo "Test $(subst .elf-verilator,,$@) Allowed" > tmp/$(subst -verilator,,$@).litmus.log
+	echo "Histogram" >> tmp/$(subst -verilator,,$@).litmus.log
+	cat tmp/$@.uart.log >> tmp/$(subst -verilator,,$@).litmus.log
+	echo "" >> tmp/$(subst -verilator,,$@).litmus.log
+
 $(addsuffix -verilator,$(riscv-benchmarks)): verilate
 	$(ver-library)/Variane_testharness $(riscv-benchmarks-dir)/$(subst -verilator,,$@)
 
@@ -687,6 +714,8 @@ run-fp-f-verilator: $(addsuffix -verilator, $(filter rv64uf%, $(riscv-fp-tests))
 run-clic-verilator: $(addsuffix -verilator, $(riscv-clic-tests))
 
 run-hyp-verilator: riscv-hyp-test-verilator
+
+run-litmus-tests-verilator: $(addsuffix -verilator, $(riscv-litmus-tests))
 
 run-benchmarks-verilator: $(addsuffix -verilator,$(riscv-benchmarks))
 
