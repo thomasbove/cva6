@@ -21,7 +21,7 @@ package ariane_soc;
   localparam int unsigned CLICNumInterruptSrc = 64;
   localparam int unsigned CLICIntCtlBits = 8;
 
-  localparam int unsigned NumHarts = 1;
+  localparam int unsigned NumHarts = 2;
   localparam int unsigned NrSlaves = NumHarts + 1; // actually masters, but slaves on the crossbar
 
   // 4 is recommended by AXI standard, so lets stick to it, do not change
