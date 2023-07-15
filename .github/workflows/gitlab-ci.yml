@@ -13,7 +13,7 @@ on: [ push, pull_request, workflow_dispatch ]
 jobs:
   gitlab-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 720
+    timeout-minutes: 5
     # Skip on forks or pull requests from forks due to missing secrets.
     if: github.repository == 'pulp-platform/cva6' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     steps:
@@ -23,4 +23,4 @@ jobs:
           domain: iis-git.ee.ethz.ch
           repo: github-mirror/cva6
           token: ${{ secrets.GITLAB_TOKEN }}
-          poll-period: 60
+          poll-period: 10

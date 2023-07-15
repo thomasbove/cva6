@@ -17,7 +17,7 @@ stages:
 litmus:
   stage: test
   needs:
-  timeout: 12hrs
+  timeout: 20hrs
   script:
     - corev_apu/rv_plic/rtl/gen_plic_addrmap.py -t4 > corev_apu/rv_plic/rtl/plic_regmap.sv
     - ${PRFX} ci/build-riscv-litmus-tests.sh
