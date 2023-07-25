@@ -302,7 +302,7 @@ module cache_ctrl import ariane_pkg::*; import std_cache_pkg::*; #(
                     be_o.data[cl_offset>>3 +: 8]  = mem_req_q.be;
                     data_o.data[cl_offset  +: 64] = mem_req_q.wdata;
                     // ~> change the state
-                    data_o.dirty = 1'b1;
+                    data_o.dirty[cl_offset>>3 +: 8] = mem_req_q.be;
                     data_o.valid = 1'b1;
 
                     // got a grant ~> this is finished now
