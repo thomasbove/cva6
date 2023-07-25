@@ -387,7 +387,7 @@ module cache_ctrl import ariane_pkg::*; import std_cache_pkg::*; #(
                     req_port_o.data_rvalid = ~mem_req_q.killed;
                     req_port_o.data_rdata = critical_word_i;
                     // we can make another request
-                    if (req_port_i.data_req) begin
+                    if (req_port_i.data_req && !stall_i) begin
                         // save index, be and we
                         mem_req_d.index = req_port_i.address_index;
                         mem_req_d.be    = req_port_i.data_be;
