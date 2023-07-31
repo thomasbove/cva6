@@ -22,6 +22,8 @@ if {$::env(BOARD) eq "genesys2"} {
       add_files -fileset constrs_1 -norecurse constraints/kc705.xdc
 } elseif {$::env(BOARD) eq "vc707"} {
       add_files -fileset constrs_1 -norecurse constraints/vc707.xdc
+} elseif {$::env(BOARD) eq "vcu118"} {
+      add_files -fileset constrs_1 -norecurse constraints/vcu118.xdc
 } else {
       exit 1
 }
@@ -31,8 +33,13 @@ read_ip { \
       "xilinx/xlnx_axi_clock_converter/xlnx_axi_clock_converter.srcs/sources_1/ip/xlnx_axi_clock_converter/xlnx_axi_clock_converter.xci" \
       "xilinx/xlnx_axi_dwidth_converter/xlnx_axi_dwidth_converter.srcs/sources_1/ip/xlnx_axi_dwidth_converter/xlnx_axi_dwidth_converter.xci" \
       "xilinx/xlnx_axi_gpio/xlnx_axi_gpio.srcs/sources_1/ip/xlnx_axi_gpio/xlnx_axi_gpio.xci" \
+      "xilinx/xlnx_axi_dwidth_converter_512_64/xlnx_axi_dwidth_converter_512_64.srcs/sources_1/ip/xlnx_axi_dwidth_converter_512_64/xlnx_axi_dwidth_converter_512_64.xci" \
       "xilinx/xlnx_axi_quad_spi/xlnx_axi_quad_spi.srcs/sources_1/ip/xlnx_axi_quad_spi/xlnx_axi_quad_spi.xci" \
       "xilinx/xlnx_clk_gen/xlnx_clk_gen.srcs/sources_1/ip/xlnx_clk_gen/xlnx_clk_gen.xci" \
+      "xilinx/xlnx_mig_ddr4/xlnx_mig_ddr4.srcs/sources_1/ip/xlnx_mig_ddr4/xlnx_mig_ddr4.xci" \
+      "xilinx/xlnx_xdma/xlnx_xdma.srcs/sources_1/ip/xlnx_xdma/xlnx_xdma.xci" \
+      "xilinx/xlnx_axi_dwidth_converter_256_64/xlnx_axi_dwidth_converter_256_64.srcs/sources_1/ip/xlnx_axi_dwidth_converter_256_64/xlnx_axi_dwidth_converter_256_64.xci" 
+
 }
 # read_ip xilinx/xlnx_protocol_checker/ip/xlnx_protocol_checker.xci
 
@@ -53,6 +60,10 @@ if {$::env(BOARD) eq "genesys2"} {
 } elseif {$::env(BOARD) eq "vc707"} {
       read_verilog -sv {src/vc707.svh ../src/common_cells/include/common_cells/registers.svh}
       set file "src/vc707.svh"
+      set registers "../src/common_cells/include/common_cells/registers.svh"
+} elseif {$::env(BOARD) eq "vcu118"} {
+      read_verilog -sv {src/vcu118.svh ../src/common_cells/include/common_cells/registers.svh}
+      set file "src/vcu118.svh"
       set registers "../src/common_cells/include/common_cells/registers.svh"
 } else {
     exit 1

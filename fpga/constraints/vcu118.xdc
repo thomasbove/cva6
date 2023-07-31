@@ -2,41 +2,52 @@
 ### VCU118 Rev2.0 XDC 12/08/2017
 ############################################################################
 # Buttons
-set_property -dict {PACKAGE_PIN L19 IOSTANDARD  LVCMOS12}  [get_ports cpu_reset] ;# Bank  73 VCCO - VCC1V2_FPGA - IO_T1U_N12_73
+set_property -dict {PACKAGE_PIN L19 IOSTANDARD LVCMOS12} [get_ports cpu_reset]
 set_property PULLDOWN true [get_ports cpu_reset]
-# PCIe
-set_false_path -from                  [get_ports sys_rst_n]
-set_property PULLUP true              [get_ports sys_rst_n]
-set_property IOSTANDARD LVCMOS18      [get_ports sys_rst_n]
-set_property PACKAGE_PIN AM17         [get_ports sys_rst_n]
-create_clock -name sys_clk -period 10 [get_ports sys_clk_p]
 
-set_property -dict {PACKAGE_PIN AC9}  [get_ports sys_clk_p]
-set_property -dict {PACKAGE_PIN AC8}  [get_ports sys_clk_n]
+# PCIe
+set_false_path -from [get_ports sys_rst_n]
+set_property PULLUP true [get_ports sys_rst_n]
+set_property IOSTANDARD LVCMOS18 [get_ports sys_rst_n]
+set_property PACKAGE_PIN AM17 [get_ports sys_rst_n]
+create_clock -period 10.000 -name sys_clk [get_ports sys_clk_p]
+
+set_property -dict {PACKAGE_PIN AC9} [get_ports sys_clk_p]
+set_property -dict {PACKAGE_PIN AC8} [get_ports sys_clk_n]
+
+# 200Mhz clock for ddr4
+set_property PACKAGE_PIN AV33 [get_ports c0_sys_clk_p]
+set_property PACKAGE_PIN AW33 [get_ports c0_sys_clk_n]
+set_property IOSTANDARD DIFF_SSTL12 [get_ports -filter NAME=~c0_sys_clk_*]
+create_clock -period 5.000 -name c0_sys_clk [get_ports c0_sys_clk_p]
 
 # JTAG
-set_property -dict {PACKAGE_PIN N28 IOSTANDARD  LVCMOS12}  [get_ports tck] ;   # PMOD1_0
-set_property -dict {PACKAGE_PIN M30 IOSTANDARD  LVCMOS12}  [get_ports tdi] ;   # PMOD1_1
-set_property -dict {PACKAGE_PIN N30 IOSTANDARD  LVCMOS12}  [get_ports tdo] ;   # PMOD1_2
-set_property -dict {PACKAGE_PIN P30 IOSTANDARD  LVCMOS12}  [get_ports tms] ;   # PMOD1_3
-set_property -dict {PACKAGE_PIN P29 IOSTANDARD  LVCMOS12}  [get_ports trst_n] ;# PMOD1_4
+set_property -dict {PACKAGE_PIN N28 IOSTANDARD LVCMOS12} [get_ports tck]
+set_property -dict {PACKAGE_PIN M30 IOSTANDARD LVCMOS12} [get_ports tdi]
+set_property -dict {PACKAGE_PIN N30 IOSTANDARD LVCMOS12} [get_ports tdo]
+set_property -dict {PACKAGE_PIN P30 IOSTANDARD LVCMOS12} [get_ports tms]
+set_property -dict {PACKAGE_PIN P29 IOSTANDARD LVCMOS12} [get_ports trst_n]
+set_max_delay -to [get_ports tdo] 20.000
+set_max_delay -from [get_ports tms] 20.000
+set_max_delay -from [get_ports tdi] 20.000
+set_max_delay -from [get_ports trst_n] 20.000
 # accept sub-optimal placement
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets tck_IBUF_inst/O]
 
-set_property -dict {PACKAGE_PIN AW25 IOSTANDARD  LVCMOS18} [get_ports tx] ;# Bank  64 VCCO - VCC1V8_FPGA - IO_L9P_T1L_N4_AD12P_64
-set_property -dict {PACKAGE_PIN BB21 IOSTANDARD  LVCMOS18} [get_ports rx] ;# Bank  64 VCCO - VCC1V8_FPGA - IO_L8N_T1L_N3_AD5N_64
+# UART
+set_property -dict {PACKAGE_PIN AW25 IOSTANDARD LVCMOS18} [get_ports tx]
+set_property -dict {PACKAGE_PIN BB21 IOSTANDARD LVCMOS18} [get_ports rx]
 
-## SD Card **TODO(zarubaf)*** This is wrong for the VCU118
-set_property -dict {PACKAGE_PIN AY14 IOSTANDARD  LVCMOS18} [get_ports spi_clk_o] ;# Bank  47 VCCO - VCC1V2_FPGA - IO_L13N_T2L_N1_GC_QBC_47
-set_property -dict {PACKAGE_PIN AY15 IOSTANDARD  LVCMOS18} [get_ports spi_clk_o_2] ;# Bank  47 VCCO - VCC1V2_FPGA - IO_L13P_T2L_N0_GC_QBC_47
+# Reset signal
+set_false_path -from [get_ports trst_n]
+set_false_path -from [get_pins i_ddr/inst/div_clk_rst_r1_reg/C]
 
-set_property -dict {PACKAGE_PIN BF16 IOSTANDARD  LVCMOS18} [get_ports spi_ss] ;# Bank  65 VCCO - VCC1V8_FPGA - IO_L2N_T0L_N3_FWE_FCS2_B_65
-set_property -dict {PACKAGE_PIN BF20 IOSTANDARD  LVCMOS18} [get_ports spi_ss_2] ;# Bank  65 VCCO - VCC1V8_FPGA - IO_L1N_T0L_N1_DBC_RS1_65
+#RAM Calibration
+set_property C_CLK_INPUT_FREQ_HZ    300000000   [get_debug_cores dbg_hub]
+set_property C_ENABLE_CLK_DIVIDER   false       [get_debug_cores dbg_hub]
+set_property C_USER_SCAN_CHAIN      1           [get_debug_cores dbg_hub]
+connect_debug_port dbg_hub/clk [get_nets clk_1]
 
-set_property -dict {PACKAGE_PIN AM18 IOSTANDARD  LVCMOS18} [get_ports spi_miso] ;# Bank  65 VCCO - VCC1V8_FPGA - IO_L22N_T3U_N7_DBC_AD0N_D05_65
-set_property -dict {PACKAGE_PIN AM19 IOSTANDARD  LVCMOS18} [get_ports spi_mosi] ;# Bank  65 VCCO - VCC1V8_FPGA - IO_L22P_T3U_N6_DBC_AD0P_D04_65
-set_property -dict {PACKAGE_PIN AP20 IOSTANDARD  LVCMOS18} [get_ports spi_miso_2] ;# Bank  65 VCCO - VCC1V8_FPGA - IO_L21N_T3L_N5_AD8N_D07_65
-set_property -dict {PACKAGE_PIN AN20 IOSTANDARD  LVCMOS18} [get_ports spi_mosi_2] ;# Bank  65 VCCO - VCC1V8_FPGA - IO_L21P_T3L_N4_AD8P_D06_65
 
 # #Other net   PACKAGE_PIN AE17     - DXN                       Bank   0 - DXN
 # #Other net   PACKAGE_PIN AE18     - DXP                       Bank   0 - DXP
@@ -1988,3 +1999,4 @@ set_property -dict {PACKAGE_PIN AN20 IOSTANDARD  LVCMOS18} [get_ports spi_mosi_2
 # set_property PACKAGE_PIN K2       [get_ports "FIREFLY_RX1_P"] ;# Bank 233 - MGTYRXP0_233
 # set_property PACKAGE_PIN K1       [get_ports "FIREFLY_RX1_N"] ;# Bank 233 - MGTYRXN0_233
 # set_property PACKAGE_PIN G4       [get_ports "FIREFLY_TX1_N"] ;# Bank 233 - MGTYTXN0_233
+

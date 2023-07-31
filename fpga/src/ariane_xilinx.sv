@@ -11,6 +11,7 @@
 // Description: Xilinx FPGA top-level
 // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
 
+
 module ariane_xilinx (
 `ifdef GENESYSII
   input  logic         sys_clk_p   ,
@@ -112,8 +113,8 @@ module ariane_xilinx (
   output logic         fan_pwm     ,
   input  logic         trst        ,
 `elsif VCU118
-  input  wire          c0_sys_clk_p    ,  // 250 MHz Clock for DDR
-  input  wire          c0_sys_clk_n    ,  // 250 MHz Clock for DDR
+  input  wire          c0_sys_clk_p    ,  // 300 MHz Clock for DDR
+  input  wire          c0_sys_clk_n    ,  // 300 MHz Clock for DDR
   input  wire          sys_clk_p       ,  // 100 MHz Clock for PCIe
   input  wire          sys_clk_n       ,  // 100 MHz Clock for PCIE
   input  wire          sys_rst_n       ,  // PCIe Reset
@@ -132,17 +133,28 @@ module ariane_xilinx (
   output wire          c0_ddr4_act_n   ,
   output wire [0:0]    c0_ddr4_ck_c    ,
   output wire [0:0]    c0_ddr4_ck_t    ,
-  output wire [7:0]    pci_exp_txp     ,
-  output wire [7:0]    pci_exp_txn     ,
-  input  wire [7:0]    pci_exp_rxp     ,
-  input  wire [7:0]    pci_exp_rxn     ,
+  // output wire [7:0]    pci_exp_txp     ,
+  // output wire [7:0]    pci_exp_txn     ,
+  // input  wire [7:0]    pci_exp_rxp     ,
+  // input  wire [7:0]    pci_exp_rxn     ,
   input  logic         trst_n          ,
+  // output wire          eth_rst_n   ,
+  // input  wire          eth_rxck    ,
+  // input  wire          eth_rxctl   ,
+  // input  wire [3:0]    eth_rxd     ,
+  // output wire          eth_txck    ,
+  // output wire          eth_txctl   ,
+  // output wire [3:0]    eth_txd     ,
+  // inout  wire          eth_mdio    ,
+  // output logic         eth_mdc     ,
 `endif
+`ifndef VCU118
   // SPI
   output logic        spi_mosi    ,
   input  logic        spi_miso    ,
   output logic        spi_ss      ,
   output logic        spi_clk_o   ,
+`endif
   // common part
   // input logic      trst_n      ,
   input  logic        tck         ,
@@ -190,7 +202,7 @@ logic phy_tx_clk;
 logic sd_clk_sys;
 
 logic ddr_sync_reset;
-logic ddr_clock_out;
+logic ddr_clock_out_200; 
 
 logic rst_n, rst;
 logic rtc;
@@ -528,7 +540,7 @@ ariane_peripherals #(
     `endif
 ) i_ariane_peripherals (
     .clk_i        ( clk                          ),
-    .clk_200MHz_i ( ddr_clock_out                ),
+    .clk_200MHz_i ( ddr_clock_out_200            ),
     .rst_ni       ( ndmreset_n                   ),
     .plic         ( master[ariane_soc::PLIC]     ),
     .uart         ( master[ariane_soc::UART]     ),
@@ -540,6 +552,7 @@ ariane_peripherals #(
     .irq_o        ( irq                          ),
     .rx_i         ( rx                           ),
     .tx_o         ( tx                           ),
+`ifndef VCU118
     .eth_txck,
     .eth_rxck,
     .eth_rxctl,
@@ -549,12 +562,15 @@ ariane_peripherals #(
     .eth_txd,
     .eth_mdio,
     .eth_mdc,
+`endif
     .phy_tx_clk_i   ( phy_tx_clk                  ),
     .sd_clk_i       ( sd_clk_sys                  ),
+`ifndef VCU118
     .spi_clk_o      ( spi_clk_o                   ),
     .spi_mosi       ( spi_mosi                    ),
     .spi_miso       ( spi_miso                    ),
     .spi_ss         ( spi_ss                      ),
+`endif
     `ifdef KC705
       .leds_o         ( {led[3:0], unused_led[7:4]}),
       .dip_switches_i ( {sw, unused_switches}     )
@@ -733,7 +749,7 @@ xlnx_axi_clock_converter i_xlnx_axi_clock_converter_ddr (
   .s_axi_rvalid   ( dram.r_valid     ),
   .s_axi_rready   ( dram.r_ready     ),
   // to size converter
-  .m_axi_aclk     ( ddr_clock_out    ),
+  .m_axi_aclk     ( ddr_clock_out_200    ),
   .m_axi_aresetn  ( ndmreset_n       ),
   .m_axi_awid     ( s_axi_awid       ),
   .m_axi_awaddr   ( s_axi_awaddr     ),
@@ -783,7 +799,7 @@ xlnx_clk_gen i_xlnx_clk_gen (
   .clk_out4 ( sd_clk_sys    ), // 50 MHz clock
   .reset    ( cpu_reset     ),
   .locked   ( pll_locked    ),
-  .clk_in1  ( ddr_clock_out )
+  .clk_in1  ( ddr_clock_out_200 ) // 300MHz
 );
 
 `ifdef KINTEX7
@@ -941,6 +957,19 @@ xlnx_mig_7_ddr3 i_ddr (
     .sys_rst             ( cpu_resetn )
 );
 `elsif VCU118
+// VCU118-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
   logic [63:0]  dram_dwidth_axi_awaddr;
   logic [7:0]   dram_dwidth_axi_awlen;
@@ -976,8 +1005,8 @@ xlnx_mig_7_ddr3 i_ddr (
   logic [1:0]   dram_dwidth_axi_rresp;
   logic [511:0] dram_dwidth_axi_rdata;
 
-axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
-  .s_axi_aclk     ( ddr_clock_out            ),
+xlnx_axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
+  .s_axi_aclk     ( ddr_clock_out_200        ),
   .s_axi_aresetn  ( ndmreset_n               ),
 
   .s_axi_awid     ( s_axi_awid               ),
@@ -988,7 +1017,7 @@ axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
   .s_axi_awlock   ( s_axi_awlock             ),
   .s_axi_awcache  ( s_axi_awcache            ),
   .s_axi_awprot   ( s_axi_awprot             ),
-  .s_axi_awregion ( '0                       ),
+  .s_axi_awregion ( 1'b0                     ),
   .s_axi_awqos    ( s_axi_awqos              ),
   .s_axi_awvalid  ( s_axi_awvalid            ),
   .s_axi_awready  ( s_axi_awready            ),
@@ -1009,7 +1038,7 @@ axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
   .s_axi_arlock   ( s_axi_arlock             ),
   .s_axi_arcache  ( s_axi_arcache            ),
   .s_axi_arprot   ( s_axi_arprot             ),
-  .s_axi_arregion ( '0                       ),
+  .s_axi_arregion ( 1'b0                     ),
   .s_axi_arqos    ( s_axi_arqos              ),
   .s_axi_arvalid  ( s_axi_arvalid            ),
   .s_axi_arready  ( s_axi_arready            ),
@@ -1055,9 +1084,10 @@ axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
   .m_axi_rlast    ( dram_dwidth_axi_rlast    ),
   .m_axi_rvalid   ( dram_dwidth_axi_rvalid   ),
   .m_axi_rready   ( dram_dwidth_axi_rready   )
-);
+  );
 
-  ddr4_0 i_ddr (
+
+  xlnx_mig_ddr4 i_ddr (
     .c0_init_calib_complete (                              ),
     .dbg_clk                (                              ),
     .c0_sys_clk_p           ( c0_sys_clk_p                 ),
@@ -1077,10 +1107,10 @@ axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
     .c0_ddr4_act_n          ( c0_ddr4_act_n                ),
     .c0_ddr4_ck_c           ( c0_ddr4_ck_c                 ),
     .c0_ddr4_ck_t           ( c0_ddr4_ck_t                 ),
-    .c0_ddr4_ui_clk         ( ddr_clock_out                ),
+    .c0_ddr4_ui_clk         ( ddr_clock_out_200           ),
     .c0_ddr4_ui_clk_sync_rst( ddr_sync_reset               ),
     .c0_ddr4_aresetn        ( ndmreset_n                   ),
-    .c0_ddr4_s_axi_awid     ( '0                           ),
+    .c0_ddr4_s_axi_awid     ( 1'b0                         ),
     .c0_ddr4_s_axi_awaddr   ( dram_dwidth_axi_awaddr[30:0] ),
     .c0_ddr4_s_axi_awlen    ( dram_dwidth_axi_awlen        ),
     .c0_ddr4_s_axi_awsize   ( dram_dwidth_axi_awsize       ),
@@ -1100,7 +1130,7 @@ axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
     .c0_ddr4_s_axi_bid      (                              ),
     .c0_ddr4_s_axi_bresp    ( dram_dwidth_axi_bresp        ),
     .c0_ddr4_s_axi_bvalid   ( dram_dwidth_axi_bvalid       ),
-    .c0_ddr4_s_axi_arid     ( '0                           ),
+    .c0_ddr4_s_axi_arid     ( 1'b0                         ),
     .c0_ddr4_s_axi_araddr   ( dram_dwidth_axi_araddr[30:0] ),
     .c0_ddr4_s_axi_arlen    ( dram_dwidth_axi_arlen        ),
     .c0_ddr4_s_axi_arsize   ( dram_dwidth_axi_arsize       ),
@@ -1121,339 +1151,19 @@ axi_dwidth_converter_512_64 i_axi_dwidth_converter_512_64 (
   );
 
 
-  logic pcie_ref_clk;
-  logic pcie_ref_clk_gt;
-
-  logic pcie_axi_clk;
-  logic pcie_axi_rstn;
-
-  logic         pcie_axi_awready;
-  logic         pcie_axi_wready;
-  logic [3:0]   pcie_axi_bid;
-  logic [1:0]   pcie_axi_bresp;
-  logic         pcie_axi_bvalid;
-  logic         pcie_axi_arready;
-  logic [3:0]   pcie_axi_rid;
-  logic [255:0] pcie_axi_rdata;
-  logic [1:0]   pcie_axi_rresp;
-  logic         pcie_axi_rlast;
-  logic         pcie_axi_rvalid;
-  logic [3:0]   pcie_axi_awid;
-  logic [63:0]  pcie_axi_awaddr;
-  logic [7:0]   pcie_axi_awlen;
-  logic [2:0]   pcie_axi_awsize;
-  logic [1:0]   pcie_axi_awburst;
-  logic [2:0]   pcie_axi_awprot;
-  logic         pcie_axi_awvalid;
-  logic         pcie_axi_awlock;
-  logic [3:0]   pcie_axi_awcache;
-  logic [255:0] pcie_axi_wdata;
-  logic [31:0]  pcie_axi_wstrb;
-  logic         pcie_axi_wlast;
-  logic         pcie_axi_wvalid;
-  logic         pcie_axi_bready;
-  logic [3:0]   pcie_axi_arid;
-  logic [63:0]  pcie_axi_araddr;
-  logic [7:0]   pcie_axi_arlen;
-  logic [2:0]   pcie_axi_arsize;
-  logic [1:0]   pcie_axi_arburst;
-  logic [2:0]   pcie_axi_arprot;
-  logic         pcie_axi_arvalid;
-  logic         pcie_axi_arlock;
-  logic [3:0]   pcie_axi_arcache;
-  logic         pcie_axi_rready;
-
-  logic [63:0]  pcie_dwidth_axi_awaddr;
-  logic [7:0]   pcie_dwidth_axi_awlen;
-  logic [2:0]   pcie_dwidth_axi_awsize;
-  logic [1:0]   pcie_dwidth_axi_awburst;
-  logic [0:0]   pcie_dwidth_axi_awlock;
-  logic [3:0]   pcie_dwidth_axi_awcache;
-  logic [2:0]   pcie_dwidth_axi_awprot;
-  logic [3:0]   pcie_dwidth_axi_awregion;
-  logic [3:0]   pcie_dwidth_axi_awqos;
-  logic         pcie_dwidth_axi_awvalid;
-  logic         pcie_dwidth_axi_awready;
-  logic [63:0]  pcie_dwidth_axi_wdata;
-  logic [7:0]   pcie_dwidth_axi_wstrb;
-  logic         pcie_dwidth_axi_wlast;
-  logic         pcie_dwidth_axi_wvalid;
-  logic         pcie_dwidth_axi_wready;
-  logic [1:0]   pcie_dwidth_axi_bresp;
-  logic         pcie_dwidth_axi_bvalid;
-  logic         pcie_dwidth_axi_bready;
-  logic [63:0]  pcie_dwidth_axi_araddr;
-  logic [7:0]   pcie_dwidth_axi_arlen;
-  logic [2:0]   pcie_dwidth_axi_arsize;
-  logic [1:0]   pcie_dwidth_axi_arburst;
-  logic [0:0]   pcie_dwidth_axi_arlock;
-  logic [3:0]   pcie_dwidth_axi_arcache;
-  logic [2:0]   pcie_dwidth_axi_arprot;
-  logic [3:0]   pcie_dwidth_axi_arregion;
-  logic [3:0]   pcie_dwidth_axi_arqos;
-  logic         pcie_dwidth_axi_arvalid;
-  logic         pcie_dwidth_axi_arready;
-  logic [63:0]  pcie_dwidth_axi_rdata;
-  logic [1:0]   pcie_dwidth_axi_rresp;
-  logic         pcie_dwidth_axi_rlast;
-  logic         pcie_dwidth_axi_rvalid;
-  logic         pcie_dwidth_axi_rready;
-
-  // PCIe Reset
-  logic sys_rst_n_c;
-  IBUF sys_reset_n_ibuf (.O(sys_rst_n_c), .I(sys_rst_n));
-
-  IBUFDS_GTE4 #(
-    .REFCLK_HROW_CK_SEL ( 2'b00 )
-  ) IBUFDS_GTE4_inst (
-    .O     ( pcie_ref_clk_gt ),
-    .ODIV2 ( pcie_ref_clk    ),
-    .CEB   ( 1'b0            ),
-    .I     ( sys_clk_p       ),
-    .IB    ( sys_clk_n       )
-  );
-
-  // 250 MHz AXI
-  xdma_0 i_xdma (
-    .sys_clk                  ( pcie_ref_clk     ),
-    .sys_clk_gt               ( pcie_ref_clk_gt  ),
-    .sys_rst_n                ( sys_rst_n_c      ),
-    .user_lnk_up              (                  ),
-
-    // Tx
-    .pci_exp_txp              ( pci_exp_txp      ),
-    .pci_exp_txn              ( pci_exp_txn      ),
-    // Rx
-    .pci_exp_rxp              ( pci_exp_rxp      ),
-    .pci_exp_rxn              ( pci_exp_rxn      ),
-    .usr_irq_req              ( 1'b0             ),
-    .usr_irq_ack              (                  ),
-    .msi_enable               (                  ),
-    .msi_vector_width         (                  ),
-    .axi_aclk                 ( pcie_axi_clk     ),
-    .axi_aresetn              ( pcie_axi_rstn    ),
-    .m_axi_awready            ( pcie_axi_awready ),
-    .m_axi_wready             ( pcie_axi_wready  ),
-    .m_axi_bid                ( pcie_axi_bid     ),
-    .m_axi_bresp              ( pcie_axi_bresp   ),
-    .m_axi_bvalid             ( pcie_axi_bvalid  ),
-    .m_axi_arready            ( pcie_axi_arready ),
-    .m_axi_rid                ( pcie_axi_rid     ),
-    .m_axi_rdata              ( pcie_axi_rdata   ),
-    .m_axi_rresp              ( pcie_axi_rresp   ),
-    .m_axi_rlast              ( pcie_axi_rlast   ),
-    .m_axi_rvalid             ( pcie_axi_rvalid  ),
-    .m_axi_awid               ( pcie_axi_awid    ),
-    .m_axi_awaddr             ( pcie_axi_awaddr  ),
-    .m_axi_awlen              ( pcie_axi_awlen   ),
-    .m_axi_awsize             ( pcie_axi_awsize  ),
-    .m_axi_awburst            ( pcie_axi_awburst ),
-    .m_axi_awprot             ( pcie_axi_awprot  ),
-    .m_axi_awvalid            ( pcie_axi_awvalid ),
-    .m_axi_awlock             ( pcie_axi_awlock  ),
-    .m_axi_awcache            ( pcie_axi_awcache ),
-    .m_axi_wdata              ( pcie_axi_wdata   ),
-    .m_axi_wstrb              ( pcie_axi_wstrb   ),
-    .m_axi_wlast              ( pcie_axi_wlast   ),
-    .m_axi_wvalid             ( pcie_axi_wvalid  ),
-    .m_axi_bready             ( pcie_axi_bready  ),
-    .m_axi_arid               ( pcie_axi_arid    ),
-    .m_axi_araddr             ( pcie_axi_araddr  ),
-    .m_axi_arlen              ( pcie_axi_arlen   ),
-    .m_axi_arsize             ( pcie_axi_arsize  ),
-    .m_axi_arburst            ( pcie_axi_arburst ),
-    .m_axi_arprot             ( pcie_axi_arprot  ),
-    .m_axi_arvalid            ( pcie_axi_arvalid ),
-    .m_axi_arlock             ( pcie_axi_arlock  ),
-    .m_axi_arcache            ( pcie_axi_arcache ),
-    .m_axi_rready             ( pcie_axi_rready  ),
-
-    .cfg_mgmt_addr            ( '0               ),
-    .cfg_mgmt_write           ( '0               ),
-    .cfg_mgmt_write_data      ( '0               ),
-    .cfg_mgmt_byte_enable     ( '0               ),
-    .cfg_mgmt_read            ( '0               ),
-    .cfg_mgmt_read_data       (                  ),
-    .cfg_mgmt_read_write_done (                  )
-  );
-
-  axi_dwidth_converter_256_64 i_axi_dwidth_converter_256_64 (
-    .s_axi_aclk     ( pcie_axi_clk             ),
-    .s_axi_aresetn  ( pcie_axi_rstn            ),
-    .s_axi_awid     ( pcie_axi_awid            ),
-    .s_axi_awaddr   ( pcie_axi_awaddr          ),
-    .s_axi_awlen    ( pcie_axi_awlen           ),
-    .s_axi_awsize   ( pcie_axi_awsize          ),
-    .s_axi_awburst  ( pcie_axi_awburst         ),
-    .s_axi_awlock   ( pcie_axi_awlock          ),
-    .s_axi_awcache  ( pcie_axi_awcache         ),
-    .s_axi_awprot   ( pcie_axi_awprot          ),
-    .s_axi_awregion ( '0                       ),
-    .s_axi_awqos    ( '0                       ),
-    .s_axi_awvalid  ( pcie_axi_awvalid         ),
-    .s_axi_awready  ( pcie_axi_awready         ),
-    .s_axi_wdata    ( pcie_axi_wdata           ),
-    .s_axi_wstrb    ( pcie_axi_wstrb           ),
-    .s_axi_wlast    ( pcie_axi_wlast           ),
-    .s_axi_wvalid   ( pcie_axi_wvalid          ),
-    .s_axi_wready   ( pcie_axi_wready          ),
-    .s_axi_bid      ( pcie_axi_bid             ),
-    .s_axi_bresp    ( pcie_axi_rresp           ),
-    .s_axi_bvalid   ( pcie_axi_bvalid          ),
-    .s_axi_bready   ( pcie_axi_bready          ),
-    .s_axi_arid     ( pcie_axi_arid            ),
-    .s_axi_araddr   ( pcie_axi_araddr          ),
-    .s_axi_arlen    ( pcie_axi_arlen           ),
-    .s_axi_arsize   ( pcie_axi_arsize          ),
-    .s_axi_arburst  ( pcie_axi_arburst         ),
-    .s_axi_arlock   ( pcie_axi_arlock          ),
-    .s_axi_arcache  ( pcie_axi_arcache         ),
-    .s_axi_arprot   ( pcie_axi_arprot          ),
-    .s_axi_arregion ( '0                       ),
-    .s_axi_arqos    ( '0                       ),
-    .s_axi_arvalid  ( pcie_axi_arvalid         ),
-    .s_axi_arready  ( pcie_axi_arready         ),
-    .s_axi_rid      ( pcie_axi_rid             ),
-    .s_axi_rdata    ( pcie_axi_rdata           ),
-    .s_axi_rresp    ( pcie_axi_bresp           ),
-    .s_axi_rlast    ( pcie_axi_rlast           ),
-    .s_axi_rvalid   ( pcie_axi_rvalid          ),
-    .s_axi_rready   ( pcie_axi_rready          ),
-
-    .m_axi_awaddr   ( pcie_dwidth_axi_awaddr   ),
-    .m_axi_awlen    ( pcie_dwidth_axi_awlen    ),
-    .m_axi_awsize   ( pcie_dwidth_axi_awsize   ),
-    .m_axi_awburst  ( pcie_dwidth_axi_awburst  ),
-    .m_axi_awlock   ( pcie_dwidth_axi_awlock   ),
-    .m_axi_awcache  ( pcie_dwidth_axi_awcache  ),
-    .m_axi_awprot   ( pcie_dwidth_axi_awprot   ),
-    .m_axi_awregion ( pcie_dwidth_axi_awregion ),
-    .m_axi_awqos    ( pcie_dwidth_axi_awqos    ),
-    .m_axi_awvalid  ( pcie_dwidth_axi_awvalid  ),
-    .m_axi_awready  ( pcie_dwidth_axi_awready  ),
-    .m_axi_wdata    ( pcie_dwidth_axi_wdata    ),
-    .m_axi_wstrb    ( pcie_dwidth_axi_wstrb    ),
-    .m_axi_wlast    ( pcie_dwidth_axi_wlast    ),
-    .m_axi_wvalid   ( pcie_dwidth_axi_wvalid   ),
-    .m_axi_wready   ( pcie_dwidth_axi_wready   ),
-    .m_axi_bresp    ( pcie_dwidth_axi_bresp    ),
-    .m_axi_bvalid   ( pcie_dwidth_axi_bvalid   ),
-    .m_axi_bready   ( pcie_dwidth_axi_bready   ),
-    .m_axi_araddr   ( pcie_dwidth_axi_araddr   ),
-    .m_axi_arlen    ( pcie_dwidth_axi_arlen    ),
-    .m_axi_arsize   ( pcie_dwidth_axi_arsize   ),
-    .m_axi_arburst  ( pcie_dwidth_axi_arburst  ),
-    .m_axi_arlock   ( pcie_dwidth_axi_arlock   ),
-    .m_axi_arcache  ( pcie_dwidth_axi_arcache  ),
-    .m_axi_arprot   ( pcie_dwidth_axi_arprot   ),
-    .m_axi_arregion ( pcie_dwidth_axi_arregion ),
-    .m_axi_arqos    ( pcie_dwidth_axi_arqos    ),
-    .m_axi_arvalid  ( pcie_dwidth_axi_arvalid  ),
-    .m_axi_arready  ( pcie_dwidth_axi_arready  ),
-    .m_axi_rdata    ( pcie_dwidth_axi_rdata    ),
-    .m_axi_rresp    ( pcie_dwidth_axi_rresp    ),
-    .m_axi_rlast    ( pcie_dwidth_axi_rlast    ),
-    .m_axi_rvalid   ( pcie_dwidth_axi_rvalid   ),
-    .m_axi_rready   ( pcie_dwidth_axi_rready   )
-  );
-
-
-assign slave[1].aw_user = '0;
-assign slave[1].ar_user = '0;
-assign slave[1].w_user = '0;
-
-logic [3:0] slave_b_id;
-logic [3:0] slave_r_id;
-
-assign slave[1].b_id = slave_b_id[1:0];
-assign slave[1].r_id = slave_r_id[1:0];
-
-// PCIe Clock Converter
-axi_clock_converter_0 pcie_axi_clock_converter (
-  .m_axi_aclk     ( clk                      ),
-  .m_axi_aresetn  ( ndmreset_n               ),
-  .m_axi_awid     ( {2'b0, slave[1].aw_id} ),
-  .m_axi_awaddr   ( slave[1].aw_addr   ),
-  .m_axi_awlen    ( slave[1].aw_len    ),
-  .m_axi_awsize   ( slave[1].aw_size   ),
-  .m_axi_awburst  ( slave[1].aw_burst  ),
-  .m_axi_awlock   ( slave[1].aw_lock   ),
-  .m_axi_awcache  ( slave[1].aw_cache  ),
-  .m_axi_awprot   ( slave[1].aw_prot   ),
-  .m_axi_awregion ( slave[1].aw_region ),
-  .m_axi_awqos    ( slave[1].aw_qos    ),
-  .m_axi_awvalid  ( slave[1].aw_valid  ),
-  .m_axi_awready  ( slave[1].aw_ready  ),
-  .m_axi_wdata    ( slave[1].w_data    ),
-  .m_axi_wstrb    ( slave[1].w_strb    ),
-  .m_axi_wlast    ( slave[1].w_last    ),
-  .m_axi_wvalid   ( slave[1].w_valid   ),
-  .m_axi_wready   ( slave[1].w_ready   ),
-  .m_axi_bid      ( slave_b_id         ),
-  .m_axi_bresp    ( slave[1].b_resp    ),
-  .m_axi_bvalid   ( slave[1].b_valid   ),
-  .m_axi_bready   ( slave[1].b_ready   ),
-  .m_axi_arid     ( {2'b0, slave[1].ar_id} ),
-  .m_axi_araddr   ( slave[1].ar_addr   ),
-  .m_axi_arlen    ( slave[1].ar_len    ),
-  .m_axi_arsize   ( slave[1].ar_size   ),
-  .m_axi_arburst  ( slave[1].ar_burst  ),
-  .m_axi_arlock   ( slave[1].ar_lock   ),
-  .m_axi_arcache  ( slave[1].ar_cache  ),
-  .m_axi_arprot   ( slave[1].ar_prot   ),
-  .m_axi_arregion ( slave[1].ar_region ),
-  .m_axi_arqos    ( slave[1].ar_qos    ),
-  .m_axi_arvalid  ( slave[1].ar_valid  ),
-  .m_axi_arready  ( slave[1].ar_ready  ),
-  .m_axi_rid      ( slave_r_id         ),
-  .m_axi_rdata    ( slave[1].r_data    ),
-  .m_axi_rresp    ( slave[1].r_resp    ),
-  .m_axi_rlast    ( slave[1].r_last    ),
-  .m_axi_rvalid   ( slave[1].r_valid   ),
-  .m_axi_rready   ( slave[1].r_ready   ),
-  // from size converter
-  .s_axi_aclk     ( pcie_axi_clk             ),
-  .s_axi_aresetn  ( ndmreset_n               ),
-  .s_axi_awid     ( '0                       ),
-  .s_axi_awaddr   ( pcie_dwidth_axi_awaddr   ),
-  .s_axi_awlen    ( pcie_dwidth_axi_awlen    ),
-  .s_axi_awsize   ( pcie_dwidth_axi_awsize   ),
-  .s_axi_awburst  ( pcie_dwidth_axi_awburst  ),
-  .s_axi_awlock   ( pcie_dwidth_axi_awlock   ),
-  .s_axi_awcache  ( pcie_dwidth_axi_awcache  ),
-  .s_axi_awprot   ( pcie_dwidth_axi_awprot   ),
-  .s_axi_awregion ( pcie_dwidth_axi_awregion ),
-  .s_axi_awqos    ( pcie_dwidth_axi_awqos    ),
-  .s_axi_awvalid  ( pcie_dwidth_axi_awvalid  ),
-  .s_axi_awready  ( pcie_dwidth_axi_awready  ),
-  .s_axi_wdata    ( pcie_dwidth_axi_wdata    ),
-  .s_axi_wstrb    ( pcie_dwidth_axi_wstrb    ),
-  .s_axi_wlast    ( pcie_dwidth_axi_wlast    ),
-  .s_axi_wvalid   ( pcie_dwidth_axi_wvalid   ),
-  .s_axi_wready   ( pcie_dwidth_axi_wready   ),
-  .s_axi_bid      (                          ),
-  .s_axi_bresp    ( pcie_dwidth_axi_bresp    ),
-  .s_axi_bvalid   ( pcie_dwidth_axi_bvalid   ),
-  .s_axi_bready   ( pcie_dwidth_axi_bready   ),
-  .s_axi_arid     ( '0                       ),
-  .s_axi_araddr   ( pcie_dwidth_axi_araddr   ),
-  .s_axi_arlen    ( pcie_dwidth_axi_arlen    ),
-  .s_axi_arsize   ( pcie_dwidth_axi_arsize   ),
-  .s_axi_arburst  ( pcie_dwidth_axi_arburst  ),
-  .s_axi_arlock   ( pcie_dwidth_axi_arlock   ),
-  .s_axi_arcache  ( pcie_dwidth_axi_arcache  ),
-  .s_axi_arprot   ( pcie_dwidth_axi_arprot   ),
-  .s_axi_arregion ( pcie_dwidth_axi_arregion ),
-  .s_axi_arqos    ( pcie_dwidth_axi_arqos    ),
-  .s_axi_arvalid  ( pcie_dwidth_axi_arvalid  ),
-  .s_axi_arready  ( pcie_dwidth_axi_arready  ),
-  .s_axi_rid      (                          ),
-  .s_axi_rdata    ( pcie_dwidth_axi_rdata    ),
-  .s_axi_rresp    ( pcie_dwidth_axi_rresp    ),
-  .s_axi_rlast    ( pcie_dwidth_axi_rlast    ),
-  .s_axi_rvalid   ( pcie_dwidth_axi_rvalid   ),
-  .s_axi_rready   ( pcie_dwidth_axi_rready   )
-);
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 `endif
 
 endmodule
